@@ -38,16 +38,16 @@
 #include <time.h>
 #include <inttypes.h>
 
-static const pn_bytes_t SEND_TIME = { sizeof("SendTime")-1, "SendTime" };
+static const pn_bytes_t SEND_TIME = { sizeof("SendTime") - 1, "SendTime" };
 
 typedef enum { CLIENT, SERVER } connection_mode;
-const char *connection_mode_names[] = { "client", "server", NULL };
+const char* connection_mode_names[] = { "client", "server", NULL };
 
 typedef enum { ACTIVE, PASSIVE } channel_mode;
-const char *channel_mode_names[] = { "active", "passive", NULL };
+const char* channel_mode_names[] = { "active", "passive", NULL };
 
 typedef enum { SEND, RECEIVE } operation;
-const char *operation_names[] = { "send", "receive", NULL };
+const char* operation_names[] = { "send", "receive", NULL };
 
 struct arrow {
     connection_mode connection_mode;
@@ -63,11 +63,11 @@ struct arrow {
     size_t credit_window;
     bool durable;
 
-    pn_proactor_t *proactor;
-    pn_listener_t *listener;
-    pn_connection_t *connection;
-    pn_message_t *message;
-    pn_rwbytes_t buffer;        /* Encoded message buffer */
+    pn_proactor_t* proactor;
+    pn_listener_t* listener;
+    pn_connection_t* connection;
+    pn_message_t* message;
+    pn_rwbytes_t buffer; // Encoded message buffer
 
     time_t start_time;
     size_t sent;
@@ -75,7 +75,7 @@ struct arrow {
     size_t accepted;
 };
 
-void fail_(const char *file, int line, const char *fmt, ...) {
+void fail_(const char* file, int line, const char* fmt, ...) {
     fprintf(stderr, "%s:%d: ", file, line);
     va_list ap;
     va_start(ap, fmt);
@@ -87,7 +87,7 @@ void fail_(const char *file, int line, const char *fmt, ...) {
 }
 
 #define FAIL(...) fail_(__FILE__, __LINE__, __VA_ARGS__)
-#define ASSERT(EXPR) ((EXPR) ? (void)0 : FAIL("failed assertion: %s", #EXPR))
+#define ASSERT(EXPR) ((EXPR) ? (void)0 : FAIL("Failed assertion: %s", #EXPR))
 
 static void stop(struct arrow* a) {
     if (a->connection) {
@@ -102,7 +102,7 @@ static inline bool bytes_equal(const pn_bytes_t a, const pn_bytes_t b) {
     return (a.size == b.size && !memcmp(a.start, b.start, a.size));
 }
 
-/* TODO aconway 2017-06-09: need windows portable version */
+// TODO aconway 2017-06-09: need windows portable version
 int64_t now() {
     struct timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
@@ -111,18 +111,17 @@ int64_t now() {
 
 static const size_t BUF_MIN = 1024;
 
-/* Ensure buf has at least size bytes, use realloc if need be */
-static void ensure(pn_rwbytes_t *buf, size_t size) {
+// Ensure buf has at least size bytes, use realloc if need be
+static void ensure(pn_rwbytes_t* buf, size_t size) {
     if (buf->size < size) {
         buf->start = realloc(buf->start, size);
         buf->size = size;
     }
 }
 
-/* Encode message m into buffer buf, return the size.
- * The buffer is expanded using realloc() if needed.
- */
-static size_t encode_message(pn_message_t* m, pn_rwbytes_t *buf) {
+// Encode message m into buffer buf, return the size.  The buffer is
+// expanded using realloc() if needed.
+static size_t encode_message(pn_message_t* m, pn_rwbytes_t* buf) {
     int err = 0;
     ensure(buf, BUF_MIN);
     size_t size = buf->size;
@@ -131,17 +130,16 @@ static size_t encode_message(pn_message_t* m, pn_rwbytes_t *buf) {
             ensure(buf, buf->size * 2);
             size = buf->size;
         } else if (err != 0) {
-            FAIL("error encoding message: %s %s", pn_code(err), pn_error_text(pn_message_error(m)));
+            FAIL("Error encoding message: %s %s", pn_code(err), pn_error_text(pn_message_error(m)));
         }
     }
     return size;
 }
 
-/* Decode message from delivery d into message m.
- * Use buf to hold the message data, expand with realloc() if needed.
- */
-static void decode_message(pn_message_t *m, pn_delivery_t *d, pn_rwbytes_t *buf) {
-    pn_link_t *l = pn_delivery_link(d);
+// Decode message from delivery d into message m.  Use buf to hold the
+// message data, expand with realloc() if needed.
+static void decode_message(pn_message_t* m, pn_delivery_t* d, pn_rwbytes_t* buf) {
+    pn_link_t* l = pn_delivery_link(d);
     ssize_t size = pn_delivery_pending(d);
     ensure(buf, size);
     ASSERT(size == pn_link_recv(l, buf->start, size));
@@ -151,11 +149,11 @@ static void decode_message(pn_message_t *m, pn_delivery_t *d, pn_rwbytes_t *buf)
     }
 }
 
-static void print_message(pn_message_t *m) {
+static void print_message(pn_message_t* m) {
     pn_atom_t id_atom = pn_message_get_id(m);
     ASSERT(id_atom.type == PN_STRING);
     pn_bytes_t id = id_atom.u.as_bytes;
-    pn_data_t *props = pn_message_properties(m);
+    pn_data_t* props = pn_message_properties(m);
     pn_data_rewind(props);
     ASSERT(pn_data_next(props));
     ASSERT(pn_data_get_map(props) == 2);
@@ -164,7 +162,7 @@ static void print_message(pn_message_t *m) {
     ASSERT(pn_data_type(props) == PN_STRING);
     pn_bytes_t key = pn_data_get_string(props);
     if (!bytes_equal(key, SEND_TIME)) {
-        FAIL("unexpected property name: %.*s", key.start, key.size);
+        FAIL("Unexpected property name: %.*s", key.start, key.size);
     }
     ASSERT(pn_data_next(props));
     ASSERT(pn_data_type(props) == PN_LONG);
@@ -173,8 +171,8 @@ static void print_message(pn_message_t *m) {
     printf("%s,%" PRId64 ",%" PRId64 "\n", id.start, stime, now());
 }
 
-static void send_message(struct arrow *a, pn_link_t *l) {
-    ++a->sent;
+static void send_message(struct arrow* a, pn_link_t* l) {
+    a->sent++;
     int64_t stime = now();
     pn_atom_t id_atom;
     int id_len = snprintf(NULL, 0, "%zu", a->sent);
@@ -183,7 +181,7 @@ static void send_message(struct arrow *a, pn_link_t *l) {
     id_atom.type = PN_STRING;
     id_atom.u.as_bytes = pn_bytes(id_len + 1, id_str);
     pn_message_set_id(a->message, id_atom);
-    pn_data_t *props = pn_message_properties(a->message);
+    pn_data_t* props = pn_message_properties(a->message);
     pn_data_clear(props);
     ASSERT(!pn_data_put_map(props));
     ASSERT(pn_data_enter(props));
@@ -192,14 +190,14 @@ static void send_message(struct arrow *a, pn_link_t *l) {
     ASSERT(pn_data_exit(props));
     size_t size = encode_message(a->message, &a->buffer);
     ASSERT(size > 0);
-    /* Use id as unique delivery tag. */
-    pn_delivery(l, pn_dtag((const char *)&a->sent, sizeof(a->sent)));
+    // Use id as unique delivery tag
+    pn_delivery(l, pn_dtag((const char* )&a->sent, sizeof(a->sent)));
     ASSERT(size == pn_link_send(l, a->buffer.start, size));
     ASSERT(pn_link_advance(l));
     printf("%s,%" PRId64 "\n", id_str, stime);
 }
 
-static void fail_if_condition(pn_event_t *e, pn_condition_t *cond) {
+static void fail_if_condition(pn_event_t* e, pn_condition_t* cond) {
     if (pn_condition_is_set(cond)) {
         FAIL("%s: %s: %s", pn_event_type_name(pn_event_type(e)),
              pn_condition_get_name(cond), pn_condition_get_description(cond));
@@ -210,7 +208,7 @@ static bool handle(struct arrow* a, pn_event_t* e) {
     switch (pn_event_type(e)) {
 
     case PN_LISTENER_OPEN:
-        /* TODO aconway 2017-06-12: listening notice */
+        // TODO aconway 2017-06-12: listening notice
         // printf("listening\n");
         // fflush(stdout);
         break;
@@ -223,14 +221,14 @@ static bool handle(struct arrow* a, pn_event_t* e) {
     case PN_CONNECTION_INIT:
         pn_connection_set_container(pn_event_connection(e), a->id);
         if (a->channel_mode == ACTIVE) {
-            pn_session_t *ssn = pn_session(pn_event_connection(e));
+            pn_session_t* ssn = pn_session(pn_event_connection(e));
             pn_session_open(ssn);
-            pn_link_t *l = NULL;
+            pn_link_t* l = NULL;
             switch (a->operation) {
             case SEND:
                 l = pn_sender(ssn, "arrow");
                 pn_terminus_set_address(pn_link_target(l), a->path);
-                /* At-least-once: send unsettled, receiver settles first */
+                // At-least-once: send unsettled, receiver settles first
                 pn_link_set_snd_settle_mode(l, PN_SND_UNSETTLED);
                 pn_link_set_rcv_settle_mode(l, PN_RCV_FIRST);
                 break;
@@ -244,14 +242,14 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         break;
 
     case PN_CONNECTION_BOUND: {
-        /* Turn off security */
-        pn_transport_t *t = pn_event_transport(e);
+        // Turn off security
+        pn_transport_t* t = pn_event_transport(e);
         pn_transport_require_auth(t, false);
         pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
         break;
     }
     case PN_CONNECTION_REMOTE_OPEN: {
-        pn_connection_open(pn_event_connection(e)); /* Return the open if not already done */
+        pn_connection_open(pn_event_connection(e)); // Return the open if not already done
         break;
     }
     case PN_SESSION_REMOTE_OPEN:
@@ -259,7 +257,7 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         break;
 
     case PN_LINK_REMOTE_OPEN: {
-        pn_link_t *l = pn_event_link(e);
+        pn_link_t* l = pn_event_link(e);
         pn_link_open(l);
         if (pn_link_is_receiver(l)) {
             pn_link_flow(l, a->credit_window);
@@ -267,16 +265,16 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         break;
     }
     case PN_LINK_FLOW: {
-        pn_link_t *l = pn_event_link(e);
+        pn_link_t* l = pn_event_link(e);
         while (pn_link_is_sender(l) && pn_link_credit(l) > 0 && a->sent < a->messages) {
             send_message(a, l);
         }
         break;
     }
     case PN_DELIVERY: {
-        pn_delivery_t *d = pn_event_delivery(e);
-        pn_link_t *l = pn_delivery_link(d);
-        if (pn_link_is_sender(l)) { /* Message acknowledged */
+        pn_delivery_t* d = pn_event_delivery(e);
+        pn_link_t* l = pn_delivery_link(d);
+        if (pn_link_is_sender(l)) { // Message acknowledged
             ASSERT(PN_ACCEPTED == pn_delivery_remote_state(d));
             pn_delivery_settle(d);
             a->accepted++;
@@ -303,7 +301,8 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         break;
     }
     case PN_TRANSPORT_CLOSED:
-        /* On server, ignore errors from dummy connections used to test if we are listening. */
+        // On server, ignore errors from dummy connections used to
+        // test if we are listening
         if (a->connection_mode != SERVER) {
             fail_if_condition(e, pn_transport_condition(pn_event_transport(e)));
         }
@@ -337,10 +336,10 @@ static bool handle(struct arrow* a, pn_event_t* e) {
     return true;
 }
 
-void run(struct arrow *a) {
+void run(struct arrow* a) {
     while(true) {
-        pn_event_batch_t *events = pn_proactor_wait(a->proactor);
-        pn_event_t *e;
+        pn_event_batch_t* events = pn_proactor_wait(a->proactor);
+        pn_event_t* e;
         for (e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
             if (!handle(a, e)) {
                 return;
@@ -353,15 +352,15 @@ void run(struct arrow *a) {
 bool find_flag(const char* want, const char* flags) {
     size_t len = strlen(want);
     const char* found = strstr(want, flags);
-    /* Return true only if what we found is ',' delimited or at start/end of flags */
+    // Return true only if what we found is ',' delimited or at start/end of flags
     return (found &&
-            (found == flags || *(found-1) == ',') &&
-            (*(found+len) == '\0' || *(found+len) == ','));
+            (found == flags || *(found - 1) == ',') &&
+            (*(found + len) == '\0' || *(found + len) == ','));
 }
 
-int token(const char *names[], const char *name) {
+int token(const char* names[], const char* name) {
     size_t i = 0;
-    for (; names[i] && strcmp(names[i], name); ++i)
+    for (; names[i] && strcmp(names[i], name); i++)
         ;
     if (!names[i]) {
         FAIL("unknown token: %s", name);
@@ -393,18 +392,18 @@ int main(int argc, char** argv) {
     a.messages = atoi(argv[8]);
     a.body_size = atoi(argv[9]);
     a.credit_window = atoi(argv[10]);
-    const char *flags = argv[12];
+    const char* flags = argv[12];
     a.durable = find_flag("durable", flags);
 
-    /* Set up the fixed parts of the message. */
+    // Set up the fixed parts of the message
     a.message = pn_message();
     pn_message_set_durable(a.message, a.durable);
-    char *body = (char*)malloc(a.body_size);
+    char* body = (char*)malloc(a.body_size);
     memset(body, 'x', a.body_size);
     pn_data_put_string(pn_message_body(a.message), pn_bytes(a.body_size, body));
     free(body);
 
-    /* Connect or listen  */
+    // Connect or listen
     char addr[PN_MAX_ADDR];
     pn_proactor_addr(addr, sizeof(addr), a.host, a.port);
     a.proactor = pn_proactor();
@@ -426,5 +425,6 @@ int main(int argc, char** argv) {
     if (a.message) pn_message_free(a.message);
     if (a.proactor) pn_proactor_free(a.proactor);
     free(a.buffer.start);
+
     return 0;
 }
