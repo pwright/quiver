@@ -38,7 +38,7 @@ using namespace qpid::types;
 static const std::string LINK_OPTIONS =
     "{link: {durable: False, reliability: at-least-once}}";
 
-long now() {
+int64_t now() {
     return std::chrono::duration_cast<std::chrono::milliseconds>
         (std::chrono::steady_clock::now().time_since_epoch()).count();
 }
@@ -74,7 +74,7 @@ struct Client {
     int transaction_size;
     bool durable;
 
-    long start_time;
+    int64_t start_time;
     int sent = 0;
     int received = 0;
 
@@ -136,7 +136,7 @@ void Client::sendMessages(Session& session) {
         }
 
         std::string id = std::to_string(sent + 1);
-        long stime = now();
+        int64_t stime = now();
 
         Message message(body);
         message.setMessageId(id);
@@ -177,8 +177,8 @@ void Client::receiveMessages(Session& session) {
         session.acknowledge();
 
         std::string id = message.getMessageId();
-        long stime = message.getProperties()["SendTime"];
-        long rtime = now();
+        int64_t stime = message.getProperties()["SendTime"];
+        int64_t rtime = now();
 
         std::cout << id << "," << stime << "," << rtime << "\n";
 

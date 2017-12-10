@@ -44,7 +44,7 @@
 #include <string>
 #include <vector>
 
-long now() {
+int64_t now() {
     return std::chrono::duration_cast<std::chrono::milliseconds>
         (std::chrono::system_clock::now().time_since_epoch()).count();
 }
@@ -129,7 +129,7 @@ struct handler : public proton::messaging_handler {
 
         while (s.credit() > 0 && sent < messages) {
             int id = sent + 1;
-            long stime = now();
+            int64_t stime = now();
 
             proton::message m(body);
             m.id(id);
@@ -169,7 +169,7 @@ struct handler : public proton::messaging_handler {
 
         proton::message_id id = m.id();
         proton::scalar stime = m.properties().get("SendTime");
-        long rtime = now();
+        int64_t rtime = now();
 
         std::cout << id << "," << stime << "," << rtime << "\n";
 
