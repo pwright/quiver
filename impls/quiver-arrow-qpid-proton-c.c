@@ -57,7 +57,7 @@ struct arrow {
     const char* host;
     const char* port;
     const char* path;
-    time_t seconds;
+    int32_t seconds;
     size_t messages;
     size_t body_size;
     size_t credit_window;
