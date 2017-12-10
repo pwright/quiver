@@ -40,7 +40,7 @@ static const std::string LINK_OPTIONS =
 
 long now() {
     return std::chrono::duration_cast<std::chrono::milliseconds>
-        (std::chrono::system_clock::now().time_since_epoch()).count();
+        (std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 void eprint(std::string message) {
@@ -67,13 +67,14 @@ struct Client {
     std::string host;
     std::string port;
     std::string path;
+    int seconds;
     int messages;
     int body_size;
     int credit_window;
     int transaction_size;
-
     bool durable;
 
+    long start_time;
     int sent = 0;
     int received = 0;
 
@@ -93,11 +94,9 @@ void Client::run() {
     std::string options = oss.str();
 
     Connection conn(domain, options);
-
-    // XXX This didn't have any effect
-    //conn.setOption("container_id", id);
-
     conn.open();
+
+    start_time = now();
 
     try {
         Session session;
@@ -132,6 +131,10 @@ void Client::sendMessages(Session& session) {
     std::string body(body_size, 'x');
 
     while (sent < messages) {
+        if (sent % 10000 == 0 && now() - start_time >= seconds * 1000) {
+            break;
+        }
+
         std::string id = std::to_string(sent + 1);
         long stime = now();
 
@@ -161,6 +164,10 @@ void Client::receiveMessages(Session& session) {
     Message message;
 
     while (received < messages) {
+        if (received % 10000 == 0 && now() - start_time >= seconds * 1000) {
+            break;
+        }
+
         if (receiver.getAvailable() == 0) {
             continue;
         }
@@ -207,6 +214,7 @@ int main(int argc, char** argv) {
     client.host = argv[5];
     client.port = argv[6];
     client.path = argv[7];
+    client.seconds = 30; // XXX
     client.messages = std::atoi(argv[8]);
     client.body_size = std::atoi(argv[9]);
     client.credit_window = std::atoi(argv[10]);

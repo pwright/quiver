@@ -42,17 +42,22 @@ class Client(object):
         self.host = None
         self.port = None
         self.path = None
+        self.seconds = None
         self.messages = None
         self.body_size = None
         self.credit_window = None
         self.transaction_size = None
-
         self.durable = False
 
+        self.body = None
+
+        self.start_time = None
         self.sent = 0
         self.received = 0
 
     def run(self):
+        self.body = b"x" * self.body_size
+
         domain = "{}:{}".format(self.host, self.port)
         conn = Connection(domain,
                           protocol=b"amqp1.0",
@@ -60,6 +65,8 @@ class Client(object):
                           sasl_mechanisms=b"ANONYMOUS")
 
         conn.open()
+
+        self.start_time = now()
 
         try:
             transactional = self.transaction_size > 0
@@ -88,14 +95,15 @@ class Client(object):
         sender = session.sender(self.path)
         sender.capacity = self.credit_window
 
-        body = b"x" * self.body_size
-
         while self.sent < self.messages:
+            if self.sent % 1000 == 0 and now() - self.start_time >= self.seconds * 1000:
+                break
+
             id_ = str(self.sent + 1)
             stime = now()
             record = "{},{}\n".format(id_, stime)
 
-            message = Message(body)
+            message = Message(self.body)
             message.id = id_
             message.properties[b"SendTime"] = stime
 
@@ -119,6 +127,9 @@ class Client(object):
         receiver.capacity = self.credit_window
 
         while self.received < self.messages:
+            if self.sent % 1000 == 0 and now() - self.start_time >= self.seconds * 1000:
+                break
+
             if receiver.available() == 0:
                 continue
 
@@ -158,6 +169,7 @@ def main():
     client.host = ARGS[5]
     client.port = ARGS[6]
     client.path = ARGS[7]
+    client.seconds = 10 # XXX
     client.messages = int(ARGS[8])
     client.body_size = int(ARGS[9])
     client.credit_window = int(ARGS[10])

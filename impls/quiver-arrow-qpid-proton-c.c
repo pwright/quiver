@@ -38,7 +38,6 @@
 #include <time.h>
 #include <inttypes.h>
 
-
 static const pn_bytes_t SEND_TIME = { sizeof("SendTime")-1, "SendTime" };
 
 typedef enum { CLIENT, SERVER } connection_mode;
@@ -58,6 +57,7 @@ struct arrow {
     const char* host;
     const char* port;
     const char* path;
+    time_t seconds;
     size_t messages;
     size_t body_size;
     size_t credit_window;
@@ -69,6 +69,7 @@ struct arrow {
     pn_message_t *message;
     pn_rwbytes_t buffer;        /* Encoded message buffer */
 
+    time_t start_time;
     size_t sent;
     size_t received;
     size_t accepted;
@@ -278,16 +279,28 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         if (pn_link_is_sender(l)) { /* Message acknowledged */
             ASSERT(PN_ACCEPTED == pn_delivery_remote_state(d));
             pn_delivery_settle(d);
-            if (++a->accepted >= a->messages) {
+            a->accepted++;
+            if (a->accepted >= a->messages) {
                 stop(a);
+            }
+            if (a->accepted % 10000 == 0) {
+                if (time(NULL) - a->start_time >= a->seconds) {
+                    stop(a);
+                }
             }
         } else if (pn_link_is_receiver(l) && pn_delivery_readable(d) && !pn_delivery_partial(d)) {
             decode_message(a->message, d, &a->buffer);
             print_message(a->message);
             pn_delivery_update(d, PN_ACCEPTED);
             pn_delivery_settle(d);
-            if (++a->received >= a->messages) {
+            a->received++;
+            if (a->received >= a->messages) {
                 stop(a);
+            }
+            if (a->received % 10000 == 0) {
+                if (time(NULL) - a->start_time >= a->seconds) {
+                    stop(a);
+                }
             }
             pn_link_flow(l, a->credit_window - pn_link_credit(l));
         }
@@ -380,6 +393,7 @@ int main(int argc, char** argv) {
     a.host = argv[5];
     a.port = argv[6];
     a.path = argv[7];
+    a.seconds = 10; // XXX
     a.messages = atoi(argv[8]);
     a.body_size = atoi(argv[9]);
     a.credit_window = atoi(argv[10]);
@@ -408,6 +422,8 @@ int main(int argc, char** argv) {
         pn_proactor_listen(a.proactor, a.listener, addr, 32);
         break;
     }
+
+    a.start_time = time(NULL);
 
     run(&a);
 

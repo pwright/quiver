@@ -20,6 +20,7 @@
 
 import os
 import sys
+import time
 import uuid
 
 from proton import Message, VERSION, __file__ as proton_module_file
@@ -43,19 +44,22 @@ class Handler(MessagingHandler):
         self.host = None
         self.port = None
         self.path = None
+        self.seconds = None
         self.messages = None
         self.body_size = None
-
         self.durable = False
 
         self.listener = None
         self.body = None
 
+        self.start_time = None
         self.sent = 0
         self.received = 0
         self.accepted = 0
 
     def on_start(self, event):
+        self.body = b"x" * self.body_size
+
         domain = "{}:{}".format(self.host, self.port)
 
         if self.connection_mode == "client":
@@ -65,7 +69,7 @@ class Handler(MessagingHandler):
         else:
             raise Exception()
 
-        self.body = b"x" * self.body_size
+        self.start_time = time.time()
 
     def on_connection_opened(self, event):
         if self.channel_mode == "active":
@@ -123,12 +127,11 @@ class Handler(MessagingHandler):
         self.accepted += 1
 
         if self.accepted == self.messages:
-            if self.connection_mode == "client":
-                event.connection.close()
-            elif self.connection_mode == "server":
-                self.listener.close()
-            else:
-                raise Exception()
+            self.stop(event)
+
+        if self.accepted % 1000 == 0:
+            if time.time() - self.start_time >= self.seconds:
+                self.stop(event)
 
     def on_message(self, event):
         assert self.operation == "receive"
@@ -145,12 +148,19 @@ class Handler(MessagingHandler):
         sys.stdout.write("{},{},{}\n".format(message.id, stime, rtime))
 
         if self.received == self.messages:
-            if self.connection_mode == "client":
-                event.connection.close()
-            elif self.connection_mode == "server":
-                self.listener.close()
-            else:
-                raise Exception()
+            self.stop(event)
+
+        if self.received % 1000 == 0:
+            if time.time() - self.start_time >= self.seconds:
+                self.stop(event)
+
+    def stop(self, event):
+        if self.connection_mode == "client":
+            event.connection.close()
+        elif self.connection_mode == "server":
+            self.listener.close()
+        else:
+            raise Exception()
 
 def main():
     set_message_threshold("warn")
@@ -176,6 +186,7 @@ def main():
     handler.host = ARGS[5]
     handler.port = ARGS[6]
     handler.path = ARGS[7]
+    handler.seconds = 10 # XXX
     handler.messages = int(ARGS[8])
     handler.body_size = int(ARGS[9])
 
