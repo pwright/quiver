@@ -289,26 +289,19 @@ class QuiverPairCommand(Command):
         _print_numeric_field("Receiver rate", v, "messages/s")
         _print_numeric_field("End-to-end rate", rate, "messages/s")
 
-        print("Latency:")
-
-        v = receiver["results"]["latency_quartiles"][0]
-        _print_numeric_field("    0%", v, "ms", "{:,.0f}")
-        v = receiver["results"]["latency_quartiles"][1]
-        _print_numeric_field("   25%", v, "ms", "{:,.0f}")
-        v = receiver["results"]["latency_quartiles"][2]
-        _print_numeric_field("   50%", v, "ms", "{:,.0f}")
-        v = receiver["results"]["latency_nines"][0]
-        _print_numeric_field("   90%", v, "ms", "{:,.0f}")
-        v = receiver["results"]["latency_nines"][1]
-        _print_numeric_field("   99%", v, "ms", "{:,.0f}")
-        v = receiver["results"]["latency_nines"][2]
-        _print_numeric_field("   99.9%", v, "ms", "{:,.0f}")
-        v = receiver["results"]["latency_nines"][3]
-        _print_numeric_field("   99.99%", v, "ms", "{:,.0f}")
-        v = receiver["results"]["latency_nines"][4]
-        _print_numeric_field("   99.999%", v, "ms", "{:,.0f}")
-        v = receiver["results"]["latency_quartiles"][4]
-        _print_numeric_field("  100%", v, "ms", "{:,.0f}")
+        print("Latencies by percentile:")
+        lv = receiver["results"]["latency_quartiles"][0]
+        rv = receiver["results"]["latency_nines"][0]
+        print("          0%: {:>8} ms                90.00%: {:>8} ms".format(lv, rv))
+        lv = receiver["results"]["latency_quartiles"][1]
+        rv = receiver["results"]["latency_nines"][1]
+        print("         25%: {:>8} ms                99.00%: {:>8} ms".format(lv, rv))
+        lv = receiver["results"]["latency_quartiles"][2]
+        rv = receiver["results"]["latency_nines"][2]
+        print("         50%: {:>8} ms                99.90%: {:>8} ms".format(lv, rv))
+        lv = receiver["results"]["latency_quartiles"][4]
+        rv = receiver["results"]["latency_nines"][3]
+        print("        100%: {:>8} ms                99.99%: {:>8} ms".format(lv, rv))
 
         print("-" * 80)
 
