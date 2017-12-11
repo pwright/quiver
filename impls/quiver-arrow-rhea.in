@@ -44,6 +44,7 @@ var operation = process.argv[4];
 var host = process.argv[6];
 var port = process.argv[7];
 var path = process.argv[8];
+var seconds = 10 // XXX
 var messages = process.argv[9];
 var body_size = process.argv[10];
 var credit_window = process.argv[11];
@@ -61,6 +62,7 @@ for (var i = 0; i < a.length; i++) {
 
 var body = types.wrap_binary(new Uint8Array(a));
 
+var start_time;
 var sent = 0;
 var received = 0;
 var accepted = 0;
@@ -91,6 +93,16 @@ function log(message) {
     offset += message.length;
 }
 
+function close(context) {
+    if (connection_mode == "client") {
+        context.connection.close();
+    } else if (connection_mode == "server") {
+        listener.close();
+    } else {
+        throw new Error();
+    }
+}
+
 container.on("connection_close", function(context) {
     flush();
 });
@@ -101,7 +113,6 @@ container.on("connection_open", function(context) {
     }
 
     if (operation == "send") {
-        // XXX How do I set delivery mode?
         var options = {
             target: {
                 address: path,
@@ -151,21 +162,15 @@ container.on("accepted", function(context) {
     accepted++;
 
     if (accepted == messages) {
-        if (connection_mode == "client") {
-            context.connection.close();
-        } else if (connection_mode == "server") {
-            listener.close();
-        } else {
-            throw new Error();
-        }
+        close(context);
+    }
+
+    if (accepted % 1000 == 0 && new Date().getTime() - start_time >= seconds * 1000) { // XXX
+        close(context);
     }
 });
 
 container.on("message", function(context) {
-    if (received == messages) {
-        return;
-    }
-
     var message = context.message;
     var rtime = new Date().getTime();
     var stime = message.application_properties.SendTime;
@@ -175,13 +180,11 @@ container.on("message", function(context) {
     received++;
 
     if (received == messages) {
-        if (connection_mode == "client") {
-            context.connection.close();
-        } else if (connection_mode == "server") {
-            listener.close();
-        } else {
-            throw new Error();
-        }
+        close(context);
+    }
+
+    if (received % 1000 == 0 && new Date().getTime() - start_time >= seconds * 1000) { // XXX
+        close(context);
     }
 });
 
@@ -189,6 +192,8 @@ if (transaction_size > 0) {
     eprint("This impl doesn't support transactions");
     process.exit(1);
 }
+
+start_time = new Date().getTime();
 
 if (connection_mode == "client") {
     container.connect({username: "anonymous", host: host, port: port});
