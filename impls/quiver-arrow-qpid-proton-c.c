@@ -281,7 +281,7 @@ static bool handle(struct arrow* a, pn_event_t* e) {
             if (a->accepted >= a->messages) {
                 stop(a);
             }
-            if (a->accepted % 10000 == 0 && now() - a->start_time >= a->seconds * 1000) {
+            if (a->accepted % 1000 == 0 && now() - a->start_time >= a->seconds * 1000) {
                 stop(a);
             }
         } else if (pn_link_is_receiver(l) && pn_delivery_readable(d) && !pn_delivery_partial(d)) {
@@ -293,7 +293,7 @@ static bool handle(struct arrow* a, pn_event_t* e) {
             if (a->received >= a->messages) {
                 stop(a);
             }
-            if (a->received % 10000 == 0 && now() - a->start_time >= a->seconds * 1000) {
+            if (a->received % 1000 == 0 && now() - a->start_time >= a->seconds * 1000) {
                 stop(a);
             }
             pn_link_flow(l, a->credit_window - pn_link_credit(l));

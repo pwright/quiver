@@ -64,21 +64,22 @@ public class QuiverArrowVertxProton {
     }
 
     public static void doMain(String[] args) throws Exception {
-        String connectionMode = args[0];
-        String channelMode = args[1];
-        String operation = args[2];
-        String id = args[3];
-        String host = args[4];
-        String port = args[5];
-        String path = args[6];
-        int messages = Integer.parseInt(args[7]);
-        int bodySize = Integer.parseInt(args[8]);
-        int creditWindow = Integer.parseInt(args[9]);
-        int transactionSize = Integer.parseInt(args[10]);
+        final String connectionMode = args[0];
+        final String channelMode = args[1];
+        final String operation = args[2];
+        final String id = args[3];
+        final String host = args[4];
+        final String port = args[5];
+        final String path = args[6];
+        final int seconds = 10; // XXX
+        final int messages = Integer.parseInt(args[7]);
+        final int bodySize = Integer.parseInt(args[8]);
+        final int creditWindow = Integer.parseInt(args[9]);
+        final int transactionSize = Integer.parseInt(args[10]);
 
-        String[] flags = args[11].split(",");
+        final String[] flags = args[11].split(",");
 
-        boolean durable = Arrays.asList(flags).contains("durable");
+        final boolean durable = Arrays.asList(flags).contains("durable");
 
         if (!CLIENT.equalsIgnoreCase(connectionMode)) {
             throw new RuntimeException("This impl currently supports client mode only");
@@ -115,9 +116,10 @@ public class QuiverArrowVertxProton {
                     connection.setContainer(id);
 
                     if (sender) {
-                        send(connection, path, messages, bodySize, durable, completionLatch);
+                        send(connection, path, seconds, messages, bodySize, durable,
+                             completionLatch);
                     } else {
-                        receive(connection, path, messages, creditWindow, completionLatch);
+                        receive(connection, path, seconds, messages, creditWindow, completionLatch);
                     }
                 } else {
                     res.cause().printStackTrace();
@@ -139,18 +141,21 @@ public class QuiverArrowVertxProton {
     }
 
     private static void send(ProtonConnection connection, String address,
-                             int messages, int bodySize, boolean durable, CountDownLatch latch) {
-        final StringBuilder line = new StringBuilder();
+                             int seconds, int messages, int bodySize, boolean durable,
+                             CountDownLatch latch) {
         connection.open();
 
-        byte[] body = new byte[bodySize];
+        final StringBuilder line = new StringBuilder();
+        final long startTime = System.currentTimeMillis();
+        final PrintWriter out = getOutputWriter();
+        final AtomicLong count = new AtomicLong(1);
+        final ProtonSender sender = connection.createSender(address);
+        final byte[] body = new byte[bodySize];
+
         Arrays.fill(body, (byte) 120);
-        PrintWriter out = getOutputWriter();
-        AtomicLong count = new AtomicLong(1);
-        ProtonSender sender = connection.createSender(address);
 
         sender.sendQueueDrainHandler(s -> {
-                while (!sender.sendQueueFull() && count.get() <= messages) {
+                while (!sender.sendQueueFull()) {
                     Message msg = Message.Factory.create();
 
                     UnsignedLong id = UnsignedLong.valueOf(count.get());
@@ -172,27 +177,31 @@ public class QuiverArrowVertxProton {
                     line.setLength(0);
                     out.append(line.append(id).append(',').append(stime).append('\n'));
 
-                    if (count.getAndIncrement() >= messages) {
-                        out.flush();
+                    long cnt = count.getAndIncrement();
 
-                        connection.closeHandler(x -> {
-                                latch.countDown();
-                            });
-                        connection.close();
+                    if (cnt >= messages) {
+                        stop(connection, latch, out);
+                        break;
                     };
+
+                    if (cnt % 1000 == 0 && System.currentTimeMillis() - startTime >= seconds * 1000) {
+                        stop(connection, latch, out);
+                        break;
+                    }
                 }
             });
         sender.open();
     }
 
     private static void receive(ProtonConnection connection, String address,
-                                int messages, int creditWindow, CountDownLatch latch) {
-        final StringBuilder line = new StringBuilder();
+                                int seconds, int messages, int creditWindow, CountDownLatch latch) {
         connection.open();
 
-        PrintWriter out = getOutputWriter();
-        AtomicInteger count = new AtomicInteger(1);
-        ProtonReceiver receiver = connection.createReceiver(address);
+        final StringBuilder line = new StringBuilder();
+        final long startTime = System.currentTimeMillis();
+        final PrintWriter out = getOutputWriter();
+        final AtomicInteger count = new AtomicInteger(1);
+        final ProtonReceiver receiver = connection.createReceiver(address);
 
         int creditTopUpThreshold = Math.max(1, creditWindow / 2);
 
@@ -202,8 +211,8 @@ public class QuiverArrowVertxProton {
                 long stime = (Long) msg.getApplicationProperties().getValue().get("SendTime");
                 long rtime = System.currentTimeMillis();
 
-            line.setLength(0);
-            out.append(line.append(id).append(',').append(stime).append(',').append(rtime).append('\n'));
+                line.setLength(0);
+                out.append(line.append(id).append(',').append(stime).append(',').append(rtime).append('\n'));
 
                 delivery.disposition(ACCEPTED, true);
 
@@ -213,13 +222,22 @@ public class QuiverArrowVertxProton {
                 }
 
                 if (count.getAndIncrement() >= messages) {
-                    out.flush();
+                    stop(connection, latch, out);
+                }
 
-                    connection.closeHandler(x -> {
-                            latch.countDown();
-                        });
-                    connection.close();
+                if (count.get() % 1000 == 0
+                    && System.currentTimeMillis() - startTime >= seconds * 1000) {
+                    stop(connection, latch, out);
                 }
             }).open();
+    }
+
+    private static void stop(ProtonConnection connection, CountDownLatch latch, PrintWriter out) {
+        out.flush();
+
+        connection.closeHandler(x -> {
+                latch.countDown();
+            });
+        connection.close();
     }
 }

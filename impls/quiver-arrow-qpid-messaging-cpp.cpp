@@ -131,7 +131,7 @@ void Client::sendMessages(Session& session) {
     std::string body(body_size, 'x');
 
     while (sent < messages) {
-        if (sent % 10000 == 0 && now() - start_time >= seconds * 1000) {
+        if (sent % 1000 == 0 && now() - start_time >= seconds * 1000) {
             break;
         }
 
@@ -164,7 +164,7 @@ void Client::receiveMessages(Session& session) {
     Message message;
 
     while (received < messages) {
-        if (received % 10000 == 0 && now() - start_time >= seconds * 1000) {
+        if (received % 1000 == 0 && now() - start_time >= seconds * 1000) {
             break;
         }
 

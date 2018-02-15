@@ -31,6 +31,7 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
+#include <proton/transfer.hpp>
 #include <proton/value.hpp>
 #include <proton/version.h>
 #include <proton/receiver_options.hpp>
@@ -75,6 +76,7 @@ struct handler : public proton::messaging_handler {
     std::string host;
     std::string port;
     std::string path;
+    int seconds;
     int messages;
     int body_size;
     int credit_window;
@@ -84,11 +86,14 @@ struct handler : public proton::messaging_handler {
     proton::listener listener;
     proton::binary body;
 
+    long start_time = 0;
     int sent = 0;
     int received = 0;
     int accepted = 0;
 
     void on_container_start(proton::container& c) override {
+        body = std::string(body_size, 'x');
+
         std::string domain = host + ":" + port;
 
         proton::connection_options opts;
@@ -102,7 +107,7 @@ struct handler : public proton::messaging_handler {
             throw std::exception();
         }
 
-        body = std::string(body_size, 'x');
+        start_time = now();
     }
 
     void on_connection_open(proton::connection& c) override {
@@ -150,11 +155,11 @@ struct handler : public proton::messaging_handler {
         accepted++;
 
         if (accepted == messages) {
-            t.connection().close();
+            stop(t);
+        }
 
-            if (connection_mode == "server") {
-                listener.stop();
-            }
+        if (accepted % 1000 == 0 && now() - start_time >= seconds * 1000) {
+            stop(t);
         }
     }
 
@@ -174,11 +179,19 @@ struct handler : public proton::messaging_handler {
         std::cout << id << "," << stime << "," << rtime << "\n";
 
         if (received == messages) {
-            d.connection().close();
+            stop(d);
+        }
 
-            if (connection_mode == "server") {
-                listener.stop();
-            }
+        if (received % 1000 == 0 && now() - start_time >= seconds * 1000) {
+            stop(d);
+        }
+    }
+
+    void stop(proton::transfer& t) {
+        t.connection().close();
+
+        if (connection_mode == "server") {
+            listener.stop();
         }
     }
 
@@ -215,6 +228,8 @@ int main(int argc, char** argv) {
     h.host = argv[5];
     h.port = argv[6];
     h.path = argv[7];
+
+    h.seconds = 10; // XXX
     h.messages = std::atoi(argv[8]);
     h.body_size = std::atoi(argv[9]);
     h.credit_window = std::atoi(argv[10]);
