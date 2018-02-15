@@ -38,6 +38,7 @@ public class QuiverArrowJms {
         String channelMode = args[1];
         String operation = args[2];
         String path = args[6];
+        int seconds = 10; // XXX
         int messages = Integer.parseInt(args[7]);
         int bodySize = Integer.parseInt(args[8]);
         int transactionSize = Integer.parseInt(args[10]);
@@ -63,7 +64,7 @@ public class QuiverArrowJms {
         ConnectionFactory factory = (ConnectionFactory) context.lookup("ConnectionFactory");
         Destination queue = (Destination) context.lookup("queueLookup");
 
-        Client client = new Client(factory, queue, operation, messages, bodySize, transactionSize, flags);
+        Client client = new Client(factory, queue, operation, seconds, messages, bodySize, transactionSize, flags);
 
         client.run();
     }
@@ -73,34 +74,36 @@ class Client {
     protected final ConnectionFactory factory;
     protected final Destination queue;
     protected final String operation;
+    protected final int seconds;
     protected final int messages;
     protected final int bodySize;
     protected final int transactionSize;
 
     protected final boolean durable;
 
+    protected long startTime;
     protected int sent;
     protected int received;
 
     Client(ConnectionFactory factory, Destination queue, String operation,
-           int messages, int bodySize, int transactionSize, String[] flags) {
+           int seconds, int messages, int bodySize, int transactionSize, String[] flags) {
         this.factory = factory;
         this.queue = queue;
         this.operation = operation;
+        this.seconds = seconds;
         this.messages = messages;
         this.bodySize = bodySize;
         this.transactionSize = transactionSize;
 
         this.durable = Arrays.asList(flags).contains("durable");
-
-        this.sent = 0;
-        this.received = 0;
     }
 
     void run() {
         try {
             Connection conn = factory.createConnection();
             conn.start();
+
+            startTime = System.currentTimeMillis();
 
             final Session session;
 
@@ -149,6 +152,10 @@ class Client {
         Arrays.fill(body, (byte) 120);
 
         while (sent < messages) {
+            if (sent % 1000 == 0 && System.currentTimeMillis() - startTime >= seconds * 1000) {
+                break;
+            }
+
             BytesMessage message = session.createBytesMessage();
             long stime = System.currentTimeMillis();
 
@@ -175,6 +182,10 @@ class Client {
         MessageConsumer consumer = session.createConsumer(queue);
 
         while (received < messages) {
+            if (received % 1000 == 0 && System.currentTimeMillis() - startTime >= seconds * 1000) {
+                break;
+            }
+
             Message message = consumer.receive();
 
             if (message == null) {
