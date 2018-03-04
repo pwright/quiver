@@ -45,7 +45,7 @@ def main():
     id_ = ARGS[4]
     host = ARGS[5]
     port = ARGS[6]
-    credit_window = ARGS[10]
+    credit_window = ARGS[11]
 
     params = (
         "jms.clientID={}".format(id_),

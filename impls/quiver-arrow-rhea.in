@@ -44,13 +44,13 @@ var operation = process.argv[4];
 var host = process.argv[6];
 var port = process.argv[7];
 var path = process.argv[8];
-var seconds = 10 // XXX
-var messages = process.argv[9];
-var body_size = process.argv[10];
-var credit_window = process.argv[11];
-var transaction_size = process.argv[12];
+var seconds = process.argv[9];
+var messages = process.argv[10];
+var body_size = process.argv[11];
+var credit_window = process.argv[12];
+var transaction_size = process.argv[13];
 
-var flags = process.argv[13].split(",");
+var flags = process.argv[14].split(",");
 
 var durable = flags.indexOf("durable") > -1;
 
@@ -67,6 +67,7 @@ var sent = 0;
 var received = 0;
 var accepted = 0;
 
+var connection;
 var listener;
 
 function eprint(message) {
@@ -93,13 +94,13 @@ function log(message) {
     offset += message.length;
 }
 
-function close(context) {
-    if (connection_mode == "client") {
-        context.connection.close();
-    } else if (connection_mode == "server") {
+function stop() {
+    if (connection) {
+        connection.close();
+    }
+
+    if (listener) {
         listener.close();
-    } else {
-        throw new Error();
     }
 }
 
@@ -108,6 +109,10 @@ container.on("connection_close", function(context) {
 });
 
 container.on("connection_open", function(context) {
+    if (connection_mode == "server") {
+        connection = context.connection;
+    }
+
     if (channel_mode == "passive") {
         return;
     }
@@ -162,11 +167,7 @@ container.on("accepted", function(context) {
     accepted++;
 
     if (accepted == messages) {
-        close(context);
-    }
-
-    if (accepted % 1000 == 0 && new Date().getTime() - start_time >= seconds * 1000) { // XXX
-        close(context);
+        stop();
     }
 });
 
@@ -180,11 +181,7 @@ container.on("message", function(context) {
     received++;
 
     if (received == messages) {
-        close(context);
-    }
-
-    if (received % 1000 == 0 && new Date().getTime() - start_time >= seconds * 1000) { // XXX
-        close(context);
+        stop();
     }
 });
 
@@ -195,8 +192,12 @@ if (transaction_size > 0) {
 
 start_time = new Date().getTime();
 
+if (seconds > 0) {
+    setTimeout(function() { stop(); }, seconds * 1000);
+}
+
 if (connection_mode == "client") {
-    container.connect({username: "anonymous", host: host, port: port});
+    connection = container.connect({username: "anonymous", host: host, port: port});
 } else if (connection_mode == "server") {
     container.sasl_server_mechanisms.enable_anonymous();
     // XXX listener = container.listen({host: host, port: port});

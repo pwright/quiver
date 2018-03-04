@@ -108,7 +108,7 @@ ifeq (${QPID_PROTON_CPP_ENABLED},yes)
 TARGETS += build/quiver/impls/quiver-arrow-qpid-proton-cpp
 endif
 
-CCFLAGS := -Os -std=c++11 -lstdc++
+CCFLAGS := -Os -std=c++11 -lstdc++ -lpthread
 CFLAGS  := -Os
 
 .PHONY: default

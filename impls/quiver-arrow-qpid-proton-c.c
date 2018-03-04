@@ -57,7 +57,7 @@ struct arrow {
     const char* host;
     const char* port;
     const char* path;
-    int32_t seconds;
+    uint32_t seconds;
     size_t messages;
     size_t body_size;
     size_t credit_window;
@@ -281,9 +281,6 @@ static bool handle(struct arrow* a, pn_event_t* e) {
             if (a->accepted >= a->messages) {
                 stop(a);
             }
-            if (a->accepted % 1000 == 0 && now() - a->start_time >= a->seconds * 1000) {
-                stop(a);
-            }
         } else if (pn_link_is_receiver(l) && pn_delivery_readable(d) && !pn_delivery_partial(d)) {
             decode_message(a->message, d, &a->buffer);
             print_message(a->message);
@@ -291,9 +288,6 @@ static bool handle(struct arrow* a, pn_event_t* e) {
             pn_delivery_settle(d);
             a->received++;
             if (a->received >= a->messages) {
-                stop(a);
-            }
-            if (a->received % 1000 == 0 && now() - a->start_time >= a->seconds * 1000) {
                 stop(a);
             }
             pn_link_flow(l, a->credit_window - pn_link_credit(l));
@@ -327,16 +321,25 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         fail_if_condition(e, pn_listener_condition(pn_event_listener(e)));
         break;
 
+    case PN_PROACTOR_TIMEOUT:
+        stop(a);
+        break;
+
     case PN_PROACTOR_INACTIVE:
         return false;
 
     default:
         break;
     }
+
     return true;
 }
 
 void run(struct arrow* a) {
+    if (a->seconds > 0) {
+        pn_proactor_set_timeout(a->proactor, a->seconds * 1000);
+    }
+
     while(true) {
         pn_event_batch_t* events = pn_proactor_wait(a->proactor);
         pn_event_t* e;
@@ -374,7 +377,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    int transaction_size = atoi(argv[11]);
+    int transaction_size = atoi(argv[12]);
 
     if (transaction_size > 0) {
         FAIL("this impl doesn't support transactions");
@@ -388,12 +391,16 @@ int main(int argc, char** argv) {
     a.host = argv[5];
     a.port = argv[6];
     a.path = argv[7];
-    a.seconds = 10; // XXX
-    a.messages = atoi(argv[8]);
-    a.body_size = atoi(argv[9]);
-    a.credit_window = atoi(argv[10]);
-    const char* flags = argv[12];
-    a.durable = find_flag("durable", flags);
+    a.seconds = atoi(argv[8]);
+    a.messages = atoi(argv[9]);
+    a.body_size = atoi(argv[10]);
+    a.credit_window = atoi(argv[11]);
+    a.durable = false;
+
+    if (argc > 13) {
+        const char* flags = argv[13];
+        a.durable = find_flag("durable", flags);
+    }
 
     // Set up the fixed parts of the message
     a.message = pn_message();

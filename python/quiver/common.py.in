@@ -168,6 +168,9 @@ class Command(object):
         self.args = self.parser.parse_args()
 
     def add_common_test_arguments(self):
+        self.parser.add_argument("-d", "--duration", metavar="SECONDS",
+                                 help="Stop after SECONDS; 0 to disable",
+                                 default=0)
         self.parser.add_argument("-m", "--messages", metavar="COUNT",
                                  help="Send or receive COUNT messages",
                                  default="1m")
@@ -184,7 +187,7 @@ class Command(object):
                                  help="Require persistent store-and-forward transfers")
         self.parser.add_argument("--timeout", metavar="SECONDS",
                                  help="Fail after SECONDS without transfers",
-                                 default="10")
+                                 default=10)
 
     def add_common_tool_arguments(self):
         self.parser.add_argument("--quiet", action="store_true",
@@ -198,12 +201,13 @@ class Command(object):
                                  version="%(prog)s {}".format(__version__))
 
     def init_common_test_attributes(self):
+        self.duration = self.args.duration
         self.messages = self.parse_int_with_unit(self.args.messages)
         self.body_size = self.parse_int_with_unit(self.args.body_size)
         self.credit_window = self.parse_int_with_unit(self.args.credit)
         self.transaction_size = self.parse_int_with_unit(self.args.transaction_size)
         self.durable = self.args.durable
-        self.timeout = self.parse_int_with_unit(self.args.timeout)
+        self.timeout = self.args.timeout
 
     def init_common_tool_attributes(self):
         self.init_only = self.args.init_only
@@ -257,7 +261,7 @@ class Command(object):
             if value.endswith("m"): return int(value[:-1]) * 1000 * 1000
             if value.endswith("k"): return int(value[:-1]) * 1000
             return int(value)
-        except ValueError:
+        except (AttributeError, ValueError):
             self.parser.error("Failure parsing '{}' as integer with unit".format(value))
 
     def intercept_impl_info_request(self, default_impl):

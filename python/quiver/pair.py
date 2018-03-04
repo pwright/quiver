@@ -113,12 +113,13 @@ class QuiverPairCommand(Command):
     def run(self):
         args = [
             self.url,
-            "--messages", self.args.messages,
-            "--body-size", self.args.body_size,
-            "--credit", self.args.credit,
-            "--transaction-size", self.args.transaction_size,
-            "--timeout", self.args.timeout,
-            "--output", self.output_dir,
+            "--duration", str(self.args.duration),
+            "--messages", str(self.args.messages),
+            "--body-size", str(self.args.body_size),
+            "--credit", str(self.args.credit),
+            "--transaction-size", str(self.args.transaction_size),
+            "--timeout", str(self.args.timeout),
+            "--output", str(self.output_dir),
         ]
 
         if self.durable:

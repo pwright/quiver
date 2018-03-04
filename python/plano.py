@@ -586,6 +586,7 @@ def _command_string(command, args):
     elems = ["\"{0}\"".format(x) if " " in x else x for x in command]
     string = " ".join(elems)
     string = string.format(*args)
+    string = string.strip()
 
     return string
 

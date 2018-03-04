@@ -26,10 +26,12 @@
 #include <qpid/messaging/Session.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace qpid::messaging;
@@ -67,7 +69,7 @@ struct Client {
     std::string host;
     std::string port;
     std::string path;
-    int seconds;
+    std::chrono::seconds seconds;
     int messages;
     int body_size;
     int credit_window;
@@ -77,6 +79,7 @@ struct Client {
     int64_t start_time;
     int sent = 0;
     int received = 0;
+    std::atomic<bool> stopping;
 
     void run();
     void sendMessages(Session&);
@@ -97,6 +100,15 @@ void Client::run() {
     conn.open();
 
     start_time = now();
+
+    if (seconds > std::chrono::seconds::zero()) {
+        std::thread timer([this]() {
+                std::this_thread::sleep_for(seconds);
+                stopping = true;
+            });
+
+        timer.detach();
+    }
 
     try {
         Session session;
@@ -130,11 +142,7 @@ void Client::sendMessages(Session& session) {
 
     std::string body(body_size, 'x');
 
-    while (sent < messages) {
-        if (sent % 1000 == 0 && now() - start_time >= seconds * 1000) {
-            break;
-        }
-
+    while (sent < messages && !stopping) {
         std::string id = std::to_string(sent + 1);
         int64_t stime = now();
 
@@ -163,11 +171,7 @@ void Client::receiveMessages(Session& session) {
 
     Message message;
 
-    while (received < messages) {
-        if (received % 1000 == 0 && now() - start_time >= seconds * 1000) {
-            break;
-        }
-
+    while (received < messages && !stopping) {
         if (receiver.getAvailable() == 0) {
             continue;
         }
@@ -214,13 +218,13 @@ int main(int argc, char** argv) {
     client.host = argv[5];
     client.port = argv[6];
     client.path = argv[7];
-    client.seconds = 30; // XXX
-    client.messages = std::atoi(argv[8]);
-    client.body_size = std::atoi(argv[9]);
-    client.credit_window = std::atoi(argv[10]);
-    client.transaction_size = std::atoi(argv[11]);
+    client.seconds = std::chrono::seconds(std::atoi(argv[8]));
+    client.messages = std::atoi(argv[9]);
+    client.body_size = std::atoi(argv[10]);
+    client.credit_window = std::atoi(argv[11]);
+    client.transaction_size = std::atoi(argv[12]);
 
-    std::vector<std::string> flags = split(argv[12], ',');
+    std::vector<std::string> flags = split(argv[13], ',');
 
     client.durable = std::any_of(flags.begin(), flags.end(), [](std::string &s) { return s == "durable"; });
 

@@ -24,18 +24,20 @@
 #include <proton/container.hpp>
 #include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
+#include <proton/duration.hpp>
 #include <proton/link.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
+#include <proton/receiver_options.hpp>
 #include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/transfer.hpp>
+#include <proton/transport.hpp>
 #include <proton/value.hpp>
 #include <proton/version.h>
-#include <proton/receiver_options.hpp>
-#include <proton/transport.hpp>
+#include <proton/work_queue.hpp>
 
 #include <algorithm>
 #include <assert.h>
@@ -83,6 +85,7 @@ struct handler : public proton::messaging_handler {
 
     bool durable;
 
+    proton::connection connection;
     proton::listener listener;
     proton::binary body;
 
@@ -95,12 +98,12 @@ struct handler : public proton::messaging_handler {
         body = std::string(body_size, 'x');
 
         std::string domain = host + ":" + port;
-
         proton::connection_options opts;
+
         opts.sasl_allowed_mechs("ANONYMOUS");
 
         if (connection_mode == "client") {
-            c.connect(domain, opts);
+            connection = c.connect(domain, opts);
         } else if (connection_mode == "server") {
             listener = c.listen(domain, opts);
         } else {
@@ -108,6 +111,10 @@ struct handler : public proton::messaging_handler {
         }
 
         start_time = now();
+
+        if (seconds > 0) {
+            c.schedule(seconds * proton::duration::SECOND, [this] { stop(); });
+        }
     }
 
     void on_connection_open(proton::connection& c) override {
@@ -122,6 +129,8 @@ struct handler : public proton::messaging_handler {
             } else {
                 throw std::exception();
             }
+        } else {
+            connection = c;
         }
     }
 
@@ -155,11 +164,7 @@ struct handler : public proton::messaging_handler {
         accepted++;
 
         if (accepted == messages) {
-            stop(t);
-        }
-
-        if (accepted % 1000 == 0 && now() - start_time >= seconds * 1000) {
-            stop(t);
+            stop();
         }
     }
 
@@ -179,16 +184,14 @@ struct handler : public proton::messaging_handler {
         std::cout << id << "," << stime << "," << rtime << "\n";
 
         if (received == messages) {
-            stop(d);
-        }
-
-        if (received % 1000 == 0 && now() - start_time >= seconds * 1000) {
-            stop(d);
+            stop();
         }
     }
 
-    void stop(proton::transfer& t) {
-        t.connection().close();
+    void stop() {
+        if (!!connection) {
+            connection.close();
+        }
 
         if (connection_mode == "server") {
             listener.stop();
@@ -212,7 +215,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    int transaction_size = std::atoi(argv[11]);
+    int transaction_size = std::atoi(argv[12]);
 
     if (transaction_size > 0) {
         eprint("This impl doesn't support transactions");
@@ -229,12 +232,12 @@ int main(int argc, char** argv) {
     h.port = argv[6];
     h.path = argv[7];
 
-    h.seconds = 10; // XXX
-    h.messages = std::atoi(argv[8]);
-    h.body_size = std::atoi(argv[9]);
-    h.credit_window = std::atoi(argv[10]);
+    h.seconds = std::atoi(argv[8]);
+    h.messages = std::atoi(argv[9]);
+    h.body_size = std::atoi(argv[10]);
+    h.credit_window = std::atoi(argv[11]);
 
-    std::vector<std::string> flags = split(argv[12], ',');
+    std::vector<std::string> flags = split(argv[13], ',');
 
     h.durable = std::any_of(flags.begin(), flags.end(), [](std::string &s) { return s == "durable"; });
 

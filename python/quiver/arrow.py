@@ -188,6 +188,7 @@ class QuiverArrowCommand(Command):
             self.host,
             self.port,
             self.path,
+            str(self.duration),
             str(self.messages),
             str(self.body_size),
             str(self.credit_window),

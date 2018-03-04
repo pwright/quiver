@@ -20,6 +20,7 @@ package net.ssorj.quiver;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 import javax.jms.*;
 import javax.naming.*;
 
@@ -38,11 +39,11 @@ public class QuiverArrowJms {
         String channelMode = args[1];
         String operation = args[2];
         String path = args[6];
-        int seconds = 10; // XXX
-        int messages = Integer.parseInt(args[7]);
-        int bodySize = Integer.parseInt(args[8]);
-        int transactionSize = Integer.parseInt(args[10]);
-        String[] flags = args[11].split(",");
+        int seconds = Integer.parseInt(args[7]);
+        int messages = Integer.parseInt(args[8]);
+        int bodySize = Integer.parseInt(args[9]);
+        int transactionSize = Integer.parseInt(args[11]);
+        String[] flags = args[12].split(",");
 
         if (!connectionMode.equals("client")) {
             throw new RuntimeException("This impl supports client mode only");
@@ -84,6 +85,7 @@ class Client {
     protected long startTime;
     protected int sent;
     protected int received;
+    protected AtomicBoolean stopping = new AtomicBoolean();
 
     Client(ConnectionFactory factory, Destination queue, String operation,
            int seconds, int messages, int bodySize, int transactionSize, String[] flags) {
@@ -104,6 +106,17 @@ class Client {
             conn.start();
 
             startTime = System.currentTimeMillis();
+
+            if (seconds > 0) {
+                Timer timer = new Timer(true);
+                TimerTask task = new TimerTask() {
+                        public void run() {
+                            stopping.lazySet(true);
+                        }
+                    };
+
+                timer.schedule(task, seconds * 1000);
+            }
 
             final Session session;
 
@@ -151,11 +164,7 @@ class Client {
         byte[] body = new byte[bodySize];
         Arrays.fill(body, (byte) 120);
 
-        while (sent < messages) {
-            if (sent % 1000 == 0 && System.currentTimeMillis() - startTime >= seconds * 1000) {
-                break;
-            }
-
+        while (sent < messages && !stopping.get()) {
             BytesMessage message = session.createBytesMessage();
             long stime = System.currentTimeMillis();
 
@@ -181,11 +190,7 @@ class Client {
         PrintWriter out = getOutputWriter();
         MessageConsumer consumer = session.createConsumer(queue);
 
-        while (received < messages) {
-            if (received % 1000 == 0 && System.currentTimeMillis() - startTime >= seconds * 1000) {
-                break;
-            }
-
+        while (received < messages && !stopping.get()) {
             Message message = consumer.receive();
 
             if (message == null) {

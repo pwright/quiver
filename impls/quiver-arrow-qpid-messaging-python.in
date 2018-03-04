@@ -22,6 +22,7 @@ from __future__ import print_function
 
 import os
 import sys
+import threading
 
 from qpid_messaging import *
 from qpid_messaging import __file__ as messaging_module_file
@@ -32,8 +33,6 @@ sys.path.insert(0, os.path.join(home, "python"))
 
 from plano import *
 from quiver.common import now
-
-link_options = "{link: {durable: False, reliability: at-least-once}}"
 
 class Client(object):
     def __init__(self):
@@ -54,6 +53,7 @@ class Client(object):
         self.start_time = None
         self.sent = 0
         self.received = 0
+        self.stopping = threading.Event()
 
     def run(self):
         self.body = b"x" * self.body_size
@@ -67,6 +67,13 @@ class Client(object):
         conn.open()
 
         self.start_time = now()
+
+        if self.seconds > 0:
+            def task():
+                self.stopping.set()
+
+            timer = threading.Timer(self.seconds, task)
+            timer.start()
 
         try:
             transactional = self.transaction_size > 0
@@ -85,20 +92,10 @@ class Client(object):
             conn.close()
 
     def send_messages(self, session):
-        # XXX
-        # NotImplementedError: Wrong number or type of arguments for overloaded function 'Session__sender'.
-        #   Possible C/C++ prototypes are:
-        #     qpid::messaging::Session::createSender(qpid::messaging::Address const &)
-        #     qpid::messaging::Session::createSender(std::string const &)
-        #address = "{}; {}".format(self.path, link_options)
-        #sender = session.sender(address)
         sender = session.sender(self.path)
         sender.capacity = self.credit_window
 
-        while self.sent < self.messages:
-            if self.sent % 1000 == 0 and now() - self.start_time >= self.seconds * 1000:
-                break
-
+        while self.sent < self.messages and not self.stopping.is_set():
             id_ = str(self.sent + 1)
             stime = now()
             record = "{},{}\n".format(id_, stime)
@@ -120,16 +117,10 @@ class Client(object):
                 session.commit()
 
     def receive_messages(self, session):
-        # XXX See above
-        #address = "{}; {}".format(self.path, link_options)
-        #receiver = session.receiver(address)
         receiver = session.receiver(self.path)
         receiver.capacity = self.credit_window
 
-        while self.received < self.messages:
-            if self.sent % 1000 == 0 and now() - self.start_time >= self.seconds * 1000:
-                break
-
+        while self.received < self.messages and not self.stopping.is_set():
             if receiver.available() == 0:
                 continue
 
@@ -169,13 +160,13 @@ def main():
     client.host = ARGS[5]
     client.port = ARGS[6]
     client.path = ARGS[7]
-    client.seconds = 10 # XXX
-    client.messages = int(ARGS[8])
-    client.body_size = int(ARGS[9])
-    client.credit_window = int(ARGS[10])
-    client.transaction_size = int(ARGS[11])
+    client.seconds = int(ARGS[8])
+    client.messages = int(ARGS[9])
+    client.body_size = int(ARGS[10])
+    client.credit_window = int(ARGS[11])
+    client.transaction_size = int(ARGS[12])
 
-    flags = ARGS[12].split(",")
+    flags = ARGS[13].split(",")
 
     if "durable" in flags:
         client.durable = True
