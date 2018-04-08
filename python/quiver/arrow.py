@@ -221,7 +221,9 @@ class QuiverArrowCommand(Command):
         self.compute_results()
         self.save_summary()
 
-        _plano.remove("{}.xz".format(self.transfers_file))
+        if _plano.exists("{}.xz".format(self.transfers_file)):
+            _plano.remove("{}.xz".format(self.transfers_file))
+
         _plano.call("xz --compress -0 --threads 0 {}", self.transfers_file)
 
     def monitor_subprocess(self, proc):
