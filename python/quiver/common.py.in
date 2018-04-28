@@ -201,13 +201,13 @@ class Command(object):
                                  version="%(prog)s {}".format(__version__))
 
     def init_common_test_attributes(self):
-        self.duration = self.args.duration
+        self.duration = int(self.args.duration)
         self.messages = self.parse_int_with_unit(self.args.messages)
         self.body_size = self.parse_int_with_unit(self.args.body_size)
         self.credit_window = self.parse_int_with_unit(self.args.credit)
         self.transaction_size = self.parse_int_with_unit(self.args.transaction_size)
         self.durable = self.args.durable
-        self.timeout = self.args.timeout
+        self.timeout = int(self.args.timeout)
 
     def init_common_tool_attributes(self):
         self.init_only = self.args.init_only
