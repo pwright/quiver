@@ -38,13 +38,13 @@ JAVASCRIPT_ENABLED := \
 QPID_MESSAGING_CPP_ENABLED := \
 	$(shell PYTHONPATH=python scripts/check-cpp-header "qpid/messaging/Message.h" 1> /dev/null 2>&1 && echo yes || echo no)
 QPID_MESSAGING_PYTHON_ENABLED := \
-	$(shell PYTHONPATH=python scripts/check-python-import "qpid_messaging" 1> /dev/null 2>&1 && echo yes || echo no)
+	$(shell PYTHONPATH=python scripts/check-python2-import "qpid_messaging" 1> /dev/null 2>&1 && echo yes || echo no)
 QPID_PROTON_C_ENABLED := \
 	$(shell PYTHONPATH=python scripts/check-cpp-header "proton/proactor.h" 1> /dev/null 2>&1 && echo yes || echo no)
 QPID_PROTON_CPP_ENABLED := \
 	$(shell PYTHONPATH=python scripts/check-cpp-header "proton/message.hpp" 1> /dev/null 2>&1 && echo yes || echo no)
 QPID_PROTON_PYTHON_ENABLED := \
-	$(shell PYTHONPATH=python scripts/check-python-import "proton" 1> /dev/null 2>&1 && echo yes || echo no)
+	$(shell PYTHONPATH=python scripts/check-python3-import "proton" 1> /dev/null 2>&1 && echo yes || echo no)
 
 ifneq (${QPID_PROTON_PYTHON_ENABLED},yes)
         $(warning Qpid Proton Python is required to build Quiver)
