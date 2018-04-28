@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import print_function
-
 import sys as _sys
 
 from plano import *
