@@ -107,8 +107,8 @@ class QuiverPairCommand(Command):
     def run(self):
         args = [
             self.url,
+            "--count", str(self.args.count),
             "--duration", str(self.args.duration),
-            "--messages", str(self.args.messages),
             "--body-size", str(self.args.body_size),
             "--credit", str(self.args.credit),
             "--transaction-size", str(self.args.transaction_size),
@@ -263,7 +263,7 @@ class QuiverPairCommand(Command):
         v = "{} {} ({})".format(self.args.impl, self.url, self.output_dir)
         print("Subject: {}".format(v))
 
-        _print_numeric_field("Messages", self.messages, "messages")
+        _print_numeric_field("Count", self.count, "messages")
         _print_numeric_field("Body size", self.body_size, "bytes")
         _print_numeric_field("Credit window", self.credit_window, "messages")
 

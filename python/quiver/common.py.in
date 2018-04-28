@@ -162,12 +162,14 @@ class Command(object):
         self.args = self.parser.parse_args()
 
     def add_common_test_arguments(self):
-        self.parser.add_argument("-d", "--duration", metavar="SECONDS",
-                                 help="Stop after SECONDS; 0 to disable",
-                                 default=0)
-        self.parser.add_argument("-m", "--messages", metavar="COUNT",
+        self.parser.add_argument("-c", "--count", metavar="COUNT",
                                  help="Send or receive COUNT messages",
                                  default="1m")
+        self.parser.add_argument("-d", "--duration", metavar="DURATION",
+                                 help="Stop after DURATION; 0 to disable",
+                                 default="0")
+        self.parser.add_argument("-m", "--messages", dest="count",
+                                 help=_argparse.SUPPRESS)
         self.parser.add_argument("--body-size", metavar="COUNT",
                                  help="Send message bodies containing COUNT bytes",
                                  default="100")
@@ -179,9 +181,9 @@ class Command(object):
                                  default="0")
         self.parser.add_argument("--durable", action="store_true",
                                  help="Require persistent store-and-forward transfers")
-        self.parser.add_argument("--timeout", metavar="SECONDS",
-                                 help="Fail after SECONDS without transfers",
-                                 default=10)
+        self.parser.add_argument("--timeout", metavar="DURATION",
+                                 help="Fail after DURATION without transfers",
+                                 default="10")
 
     def add_common_tool_arguments(self):
         self.parser.add_argument("--quiet", action="store_true",
@@ -195,13 +197,13 @@ class Command(object):
                                  version="%(prog)s {}".format(__version__))
 
     def init_common_test_attributes(self):
-        self.duration = int(self.args.duration)
-        self.messages = self.parse_int_with_unit(self.args.messages)
-        self.body_size = self.parse_int_with_unit(self.args.body_size)
-        self.credit_window = self.parse_int_with_unit(self.args.credit)
-        self.transaction_size = self.parse_int_with_unit(self.args.transaction_size)
+        self.count = self.parse_count(self.args.count)
+        self.duration = self.parse_duration(self.args.duration)
+        self.body_size = self.parse_count(self.args.body_size)
+        self.credit_window = self.parse_count(self.args.credit)
+        self.transaction_size = self.parse_count(self.args.transaction_size)
         self.durable = self.args.durable
-        self.timeout = int(self.args.timeout)
+        self.timeout = self.parse_duration(self.args.timeout)
 
     def init_common_tool_attributes(self):
         self.init_only = self.args.init_only
@@ -248,12 +250,24 @@ class Command(object):
 
         _plano.notice("Saving output files to {}", self.output_dir)
 
-    def parse_int_with_unit(self, value):
+    def parse_count(self, value):
+
         assert self.parser is not None
 
         try:
             if value.endswith("m"): return int(value[:-1]) * 1000 * 1000
             if value.endswith("k"): return int(value[:-1]) * 1000
+            return int(value)
+        except (AttributeError, ValueError):
+            self.parser.error("Failure parsing '{}' as integer with unit".format(value))
+
+    def parse_duration(self, value):
+        assert self.parser is not None
+
+        try:
+            if value.endswith("h"): return int(value[:-1]) * 60 * 60
+            if value.endswith("m"): return int(value[:-1]) * 60
+            if value.endswith("s"): return int(value[:-1])
             return int(value)
         except (AttributeError, ValueError):
             self.parser.error("Failure parsing '{}' as integer with unit".format(value))

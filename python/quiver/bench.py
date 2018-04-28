@@ -314,11 +314,11 @@ class _TestPair(object):
             "quiver", "//127.0.0.1:{}/q0".format(port),
             "--sender", self.sender_impl,
             "--receiver", self.receiver_impl,
-            "--duration", str(args.duration),
-            "--messages", args.messages,
+            "--count", args.count,
+            "--duration", args.duration,
             "--body-size", args.body_size,
             "--credit", args.credit,
-            "--timeout", str(args.timeout),
+            "--timeout", args.timeout,
             "--output", self.output_dir,
         ]
 
