@@ -50,11 +50,6 @@ ifneq (${QPID_PROTON_PYTHON_ENABLED},yes)
         $(warning Qpid Proton Python is required to build Quiver)
 endif
 
-# XXX Workaround for an Ubuntu packaging problem
-ifeq ($(shell lsb_release -is),Ubuntu)
-	QPID_PROTON_CPP_ENABLED := no
-endif
-
 $(info JAVA_ENABLED=${JAVA_ENABLED})
 $(info JAVASCRIPT_ENABLED=${JAVASCRIPT_ENABLED})
 $(info QPID_MESSAGING_CPP_ENABLED=${QPID_MESSAGING_CPP_ENABLED})
