@@ -36,12 +36,12 @@ message servers and APIs.
 """
 
 _epilog = """
-URLs:
-  [amqp://DOMAIN/]PATH            The default domain is 'localhost'
-  amqp://example.net/jobs
-  amqp://10.0.0.10:5672/jobs/alpha
-  amqp://localhost/q0
-  q0
+address URLs:
+  [SCHEME:][//SERVER/]ADDRESS     The default server is 'localhost'
+  queue0
+  //localhost/queue0
+  amqp://example.net:10000/jobs
+  amqps://10.0.0.10/jobs/alpha
 
 implementations:
   activemq-artemis-jms            Client mode only; requires Artemis server
@@ -67,8 +67,8 @@ class QuiverPairCommand(Command):
         self.parser.description = _description.lstrip()
         self.parser.epilog = _epilog.lstrip()
 
-        self.parser.add_argument("url", metavar="URL",
-                                 help="The location of a message queue")
+        self.parser.add_argument("url", metavar="ADDRESS-URL",
+                                 help="The location of a message source or target")
         self.parser.add_argument("--output", metavar="DIR",
                                  help="Save output files to DIR")
         self.parser.add_argument("--arrow", metavar="IMPL", default=DEFAULT_ARROW_IMPL,

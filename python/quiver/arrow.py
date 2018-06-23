@@ -44,12 +44,12 @@ operations:
   send                  Send messages
   receive               Receive messages
 
-URLs:
-  [amqp://DOMAIN/]PATH            The default domain is 'localhost'
-  amqp://example.net/jobs
-  amqp://10.0.0.10:5672/jobs/alpha
-  amqp://localhost/q0
-  q0
+address URLs:
+  [SCHEME:][//SERVER/]ADDRESS     The default server is 'localhost'
+  queue0
+  //localhost/queue0
+  amqp://example.net:10000/jobs
+  amqps://10.0.0.10/jobs/alpha
 
 implementations:
   activemq-artemis-jms            Client mode only; requires Artemis server
@@ -88,8 +88,8 @@ class QuiverArrowCommand(Command):
         self.parser.add_argument("operation", metavar="OPERATION",
                                  choices=["send", "receive"],
                                  help="Either 'send' or 'receive'")
-        self.parser.add_argument("url", metavar="URL",
-                                 help="The location of a message queue")
+        self.parser.add_argument("url", metavar="ADDRESS-URL",
+                                 help="The location of a message source or target")
         self.parser.add_argument("--output", metavar="DIR",
                                  help="Save output files to DIR")
         self.parser.add_argument("--impl", metavar="NAME",

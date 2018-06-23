@@ -40,8 +40,8 @@ class QuiverLaunchCommand(Command):
 
         self.parser.description = _description.lstrip()
 
-        self.parser.add_argument("url", metavar="URL",
-                                 help="The location of a message queue")
+        self.parser.add_argument("url", metavar="ADDRESS-URL",
+                                 help="The location of a message source or target")
         self.parser.add_argument("--count", metavar="COUNT", default=1, type=int)
         self.parser.add_argument("--impl", metavar="IMPL", default="qpid-proton-python")
         self.parser.add_argument("--options", metavar="OPTIONS", default="")

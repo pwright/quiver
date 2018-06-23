@@ -35,12 +35,12 @@ Start a message server with the given queue.
 """
 
 _epilog = """
-URLs:
-  [amqp://DOMAIN/]PATH            The default domain is 'localhost'
-  amqp://example.net/jobs
-  amqp://10.0.0.10:5672/jobs/alpha
-  amqp://localhost/q0
-  q0
+address URLs:
+  [SCHEME:][//SERVER/]ADDRESS     The default server is 'localhost'
+  queue0
+  //localhost/queue0
+  amqp://example.net:10000/jobs
+  amqps://10.0.0.10/jobs/alpha
 
 server implementations:
   activemq
@@ -56,8 +56,8 @@ class QuiverServerCommand(Command):
         self.parser.description = _description.lstrip()
         self.parser.epilog = _epilog.lstrip()
 
-        self.parser.add_argument("url", metavar="URL",
-                                 help="The location of a message queue")
+        self.parser.add_argument("url", metavar="ADDRESS-URL",
+                                 help="The location of a message source or target")
         self.parser.add_argument("--impl", metavar="NAME",
                                  help="Use NAME implementation",
                                  default=DEFAULT_SERVER_IMPL)
