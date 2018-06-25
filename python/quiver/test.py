@@ -88,13 +88,12 @@ def test_quiver_pair_peer_to_peer(session):
         call("quiver {} --arrow rhea --count 1 --peer-to-peer --verbose", _test_url())
 
 def test_quiver_bench_client_server(session):
-    # XXX Mixed pairs
-
     with temp_dir() as output:
         command = [
             "quiver-bench",
             "--count", "1",
             "--client-server",
+            "--mixed-pairs",
             "--include-servers", "builtin",
             "--exclude-servers", "none",
             "--verbose",
@@ -109,8 +108,8 @@ def test_quiver_bench_peer_to_peer(session):
             "quiver-bench",
             "--count", "1",
             "--peer-to-peer",
-            # "--mixed-pairs",
-            "--exclude-senders", "qpid-proton-cpp",
+            "--mixed-pairs",
+            "--exclude-receivers", "rhea",
             "--verbose",
             "--output", output,
         ]
