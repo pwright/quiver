@@ -144,19 +144,21 @@ class Client {
             }
 
             conn.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         } catch (JMSException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static PrintWriter getOutputWriter() {
-        return new PrintWriter(System.out);
+    private static BufferedWriter getWriter() {
+        return new BufferedWriter(new OutputStreamWriter(System.out));
     }
 
-    void sendMessages(Session session) throws JMSException {
+    void sendMessages(Session session) throws IOException, JMSException {
         final StringBuilder line = new StringBuilder();
-        PrintWriter out = getOutputWriter();
-        MessageProducer producer = session.createProducer(queue);
+        final BufferedWriter out = getWriter();
+        final MessageProducer producer = session.createProducer(queue);
 
         if (durable) {
             producer.setDeliveryMode(DeliveryMode.PERSISTENT);
@@ -190,10 +192,10 @@ class Client {
         out.flush();
     }
 
-    void receiveMessages(Session session) throws JMSException {
+    void receiveMessages(Session session) throws IOException, JMSException {
         final StringBuilder line = new StringBuilder();
-        PrintWriter out = getOutputWriter();
-        MessageConsumer consumer = session.createConsumer(queue);
+        final BufferedWriter out = getWriter();
+        final MessageConsumer consumer = session.createConsumer(queue);
 
         while (received < messages && !stopping.get()) {
             Message message = consumer.receive();
