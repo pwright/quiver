@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package net.ssorj.quiver;
 
 import java.io.*;
@@ -25,7 +26,7 @@ import javax.jms.*;
 import javax.naming.*;
 
 public class QuiverArrowJms {
-    public static void main(String[] args) {
+    public static void main(final String[] args) {
         try {
             doMain(args);
         } catch (Exception e) {
@@ -34,16 +35,16 @@ public class QuiverArrowJms {
         }
     }
 
-    public static void doMain(String[] args) throws Exception {
-        String connectionMode = args[0];
-        String channelMode = args[1];
-        String operation = args[2];
-        String path = args[6];
-        int seconds = Integer.parseInt(args[7]);
-        int messages = Integer.parseInt(args[8]);
-        int bodySize = Integer.parseInt(args[9]);
-        int transactionSize = Integer.parseInt(args[11]);
-        String[] flags = args[12].split(",");
+    public static void doMain(final String[] args) throws Exception {
+        final String connectionMode = args[0];
+        final String channelMode = args[1];
+        final String operation = args[2];
+        final String path = args[6];
+        final int seconds = Integer.parseInt(args[7]);
+        final int messages = Integer.parseInt(args[8]);
+        final int bodySize = Integer.parseInt(args[9]);
+        final int transactionSize = Integer.parseInt(args[11]);
+        final String[] flags = args[12].split(",");
 
         if (!connectionMode.equals("client")) {
             throw new RuntimeException("This impl supports client mode only");
@@ -53,19 +54,20 @@ public class QuiverArrowJms {
             throw new RuntimeException("This impl supports active mode only");
         }
 
-        String url = System.getProperty("arrow.jms.url");
+        final String url = System.getProperty("arrow.jms.url");
         assert url != null;
 
-        Hashtable<Object, Object> env = new Hashtable<Object, Object>();
+        final Hashtable<Object, Object> env = new Hashtable<Object, Object>();
         env.put("connectionFactory.ConnectionFactory", url);
         env.put("brokerURL", url);
         env.put("queue.queueLookup", path);
 
-        Context context = new InitialContext(env);;
-        ConnectionFactory factory = (ConnectionFactory) context.lookup("ConnectionFactory");
-        Destination queue = (Destination) context.lookup("queueLookup");
+        final Context context = new InitialContext(env);
+        final ConnectionFactory factory = (ConnectionFactory) context.lookup("ConnectionFactory");
+        final Destination queue = (Destination) context.lookup("queueLookup");
 
-        Client client = new Client(factory, queue, operation, seconds, messages, bodySize, transactionSize, flags);
+        final Client client = new Client(factory, queue, operation, seconds, messages, bodySize,
+                                         transactionSize, flags);
 
         client.run();
     }
@@ -82,13 +84,13 @@ class Client {
 
     protected final boolean durable;
 
-    protected long startTime;
     protected int sent;
     protected int received;
-    protected AtomicBoolean stopping = new AtomicBoolean();
+    protected final AtomicBoolean stopping = new AtomicBoolean();
 
-    Client(ConnectionFactory factory, Destination queue, String operation,
-           int seconds, int messages, int bodySize, int transactionSize, String[] flags) {
+    Client(final ConnectionFactory factory, final Destination queue, final String operation,
+           final int seconds, final int messages, final int bodySize,
+           final int transactionSize, final String[] flags) {
         this.factory = factory;
         this.queue = queue;
         this.operation = operation;
@@ -102,14 +104,13 @@ class Client {
 
     void run() {
         try {
-            Connection conn = factory.createConnection();
+            final Connection conn = factory.createConnection();
+
             conn.start();
 
-            startTime = System.currentTimeMillis();
-
             if (seconds > 0) {
-                Timer timer = new Timer(true);
-                TimerTask task = new TimerTask() {
+                final Timer timer = new Timer(true);
+                final TimerTask task = new TimerTask() {
                         public void run() {
                             stopping.lazySet(true);
                         }
@@ -155,10 +156,13 @@ class Client {
         return new BufferedWriter(new OutputStreamWriter(System.out));
     }
 
-    void sendMessages(Session session) throws IOException, JMSException {
+    void sendMessages(final Session session) throws IOException, JMSException {
         final StringBuilder line = new StringBuilder();
         final BufferedWriter out = getWriter();
         final MessageProducer producer = session.createProducer(queue);
+        final byte[] body = new byte[bodySize];
+
+        Arrays.fill(body, (byte) 120);
 
         if (durable) {
             producer.setDeliveryMode(DeliveryMode.PERSISTENT);
@@ -168,12 +172,9 @@ class Client {
 
         producer.setDisableMessageTimestamp(true);
 
-        byte[] body = new byte[bodySize];
-        Arrays.fill(body, (byte) 120);
-
         while (sent < messages && !stopping.get()) {
-            BytesMessage message = session.createBytesMessage();
-            long stime = System.currentTimeMillis();
+            final BytesMessage message = session.createBytesMessage();
+            final long stime = System.currentTimeMillis();
 
             message.writeBytes(body);
             message.setLongProperty("SendTime", stime);
@@ -198,15 +199,15 @@ class Client {
         final MessageConsumer consumer = session.createConsumer(queue);
 
         while (received < messages && !stopping.get()) {
-            Message message = consumer.receive();
+            final Message message = consumer.receive();
 
             if (message == null) {
                 throw new RuntimeException("Null receive");
             }
 
-            String id = message.getJMSMessageID();
-            long stime = message.getLongProperty("SendTime");
-            long rtime = System.currentTimeMillis();
+            final String id = message.getJMSMessageID();
+            final long stime = message.getLongProperty("SendTime");
+            final long rtime = System.currentTimeMillis();
 
             line.setLength(0);
             out.append(line.append(id).append(',').append(stime).append(',').append(rtime).append('\n'));
