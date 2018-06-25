@@ -58,34 +58,34 @@ def test_quiver_server(session):
             continue
 
         with _TestServer(impl=impl) as server:
-            call("quiver {} -m 1", server.url)
+            call("quiver {} --count 1", server.url)
 
 def disabled_test_quiver_launch_client_server(session):
     with _TestServer() as server:
-        call("quiver-launch {} --count 2 --options \"-m 1\" --verbose", server.url)
+        call("quiver-launch {} --count 2 --options \"--count 1\" --verbose", server.url)
 
 def disabled_test_quiver_launch_peer_to_peer(session):
-    call("quiver-launch --sender-options=\"-m 1\" --receiver-options=\"-m 1 --server --passive\" --verbose {}", _test_url())
+    call("quiver-launch --sender-options=\"--count 1\" --receiver-options=\"--count 1 --server --passive\" --verbose {}", _test_url())
 
 def test_quiver_pair_client_server(session):
     # XXX full matrix
 
     with _TestServer() as server:
-        call("quiver {} --arrow qpid-proton-python -m 1 --verbose", server.url)
+        call("quiver {} --arrow qpid-proton-python --count 1 --verbose", server.url)
 
         if impl_exists("qpid-jms"):
-            call("quiver {} --arrow qpid-jms -m 1 --verbose", server.url)
+            call("quiver {} --arrow qpid-jms --count 1 --verbose", server.url)
 
         if impl_exists("vertx-proton"):
-            call("quiver {} --arrow vertx-proton -m 1 --verbose", server.url)
+            call("quiver {} --arrow vertx-proton --count 1 --verbose", server.url)
 
 def test_quiver_pair_peer_to_peer(session):
     # XXX full matrix
 
-    call("quiver {} --arrow qpid-proton-python -m 1 --peer-to-peer --verbose", _test_url())
+    call("quiver {} --arrow qpid-proton-python --count 1 --peer-to-peer --verbose", _test_url())
 
     if impl_exists("rhea"):
-        call("quiver {} --arrow rhea -m 1 --peer-to-peer --verbose", _test_url())
+        call("quiver {} --arrow rhea --count 1 --peer-to-peer --verbose", _test_url())
 
 def test_quiver_bench_client_server(session):
     # XXX Mixed pairs
@@ -93,7 +93,7 @@ def test_quiver_bench_client_server(session):
     with temp_dir() as output:
         command = [
             "quiver-bench",
-            "-m", "1",
+            "--count", "1",
             "--client-server",
             "--include-servers", "builtin",
             "--exclude-servers", "none",
@@ -104,13 +104,12 @@ def test_quiver_bench_client_server(session):
         call(command)
 
 def test_quiver_bench_peer_to_peer(session):
-    # XXX Mixed pairs
-
     with temp_dir() as output:
         command = [
             "quiver-bench",
-            "-m", "1",
+            "--count", "1",
             "--peer-to-peer",
+            # "--mixed-pairs",
             "--exclude-senders", "qpid-proton-cpp",
             "--verbose",
             "--output", output,

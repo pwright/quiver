@@ -31,6 +31,7 @@
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
+#include <proton/target_options.hpp>
 #include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/transfer.hpp>
@@ -131,18 +132,27 @@ struct handler : public proton::messaging_handler {
             }
         } else {
             connection = c;
+            connection.open();
         }
     }
 
     void on_receiver_open(proton::receiver& r) override {
-        r.open(proton::receiver_options().credit_window(credit_window));
+        proton::receiver_options ropts;
+        proton::target_options topts;
+
+        topts.address(r.target().address());
+
+        ropts.credit_window(credit_window);
+        ropts.target(topts);
+
+        r.open(ropts);
     }
 
     void on_sendable(proton::sender& s) override {
         assert (operation == "send");
 
         while (s.credit() > 0 && sent < messages) {
-            int id = sent + 1;
+            std::string id = std::to_string(sent + 1);
             int64_t stime = now();
 
             proton::message m(body);

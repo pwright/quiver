@@ -42,7 +42,7 @@ static const std::string LINK_OPTIONS =
 
 int64_t now() {
     return std::chrono::duration_cast<std::chrono::milliseconds>
-        (std::chrono::steady_clock::now().time_since_epoch()).count();
+        (std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 void eprint(std::string message) {
@@ -130,6 +130,10 @@ void Client::run() {
         if (transaction_size > 0) {
             session.commit();
         }
+
+        conn.close();
+    } catch (const ConnectionError& e) {
+        // Ignore error from remote close
     } catch (const std::exception& e) {
         conn.close();
         throw;
@@ -155,6 +159,7 @@ void Client::sendMessages(Session& session) {
         }
 
         sender.send(message);
+
         sent++;
 
         std::cout << id << "," << stime << "\n";

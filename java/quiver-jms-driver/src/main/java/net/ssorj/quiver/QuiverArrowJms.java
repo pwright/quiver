@@ -126,12 +126,17 @@ class Client {
                 session = conn.createSession(false, Session.AUTO_ACKNOWLEDGE);
             }
 
-            if (operation.equals("send")) {
-                sendMessages(session);
-            } else if (operation.equals("receive")) {
-                receiveMessages(session);
-            } else {
-                throw new java.lang.IllegalStateException();
+            try {
+                if (operation.equals("send")) {
+                    sendMessages(session);
+                } else if (operation.equals("receive")) {
+                    receiveMessages(session);
+                } else {
+                    throw new java.lang.IllegalStateException();
+                }
+            } catch (JMSException e) {
+                // Ignore error from remote close
+                return;
             }
 
             if (transactionSize > 0) {

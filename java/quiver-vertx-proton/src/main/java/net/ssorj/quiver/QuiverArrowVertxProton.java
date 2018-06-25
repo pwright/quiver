@@ -169,7 +169,7 @@ public class QuiverArrowVertxProton {
                 while (!sender.sendQueueFull()) {
                     Message msg = Message.Factory.create();
 
-                    UnsignedLong id = UnsignedLong.valueOf(count.get());
+                    String id = String.valueOf(count.get());
                     msg.setMessageId(id);
 
                     msg.setBody(new Data(new Binary(body)));

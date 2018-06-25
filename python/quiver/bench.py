@@ -319,14 +319,17 @@ class _TestPair(object):
             "--body-size", args.body_size,
             "--credit", args.credit,
             "--timeout", args.timeout,
-            "--output", self.output_dir,
         ]
 
         if self.peer_to_peer:
-            command.append("--peer-to-peer")
+            command += ["--peer-to-peer"]
 
         if self.command.verbose:
-            command.append("--verbose")
+            command += ["--verbose"]
+
+        command += [
+            "--output", self.output_dir,
+        ]
 
         _plano.write(self.command_file, "{}\n".format(" ".join(command)))
 

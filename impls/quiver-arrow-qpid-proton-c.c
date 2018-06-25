@@ -258,6 +258,9 @@ static bool handle(struct arrow* a, pn_event_t* e) {
 
     case PN_LINK_REMOTE_OPEN: {
         pn_link_t* l = pn_event_link(e);
+        pn_terminus_t* t = pn_link_target(l);
+        pn_terminus_t* rt = pn_link_remote_target(l);
+        pn_terminus_set_address(t, pn_terminus_get_address(rt));
         pn_link_open(l);
         if (pn_link_is_receiver(l)) {
             pn_link_flow(l, a->credit_window);

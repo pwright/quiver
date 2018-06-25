@@ -113,7 +113,6 @@ class QuiverPairCommand(Command):
             "--credit", str(self.args.credit),
             "--transaction-size", str(self.args.transaction_size),
             "--timeout", str(self.args.timeout),
-            "--output", str(self.output_dir),
         ]
 
         if self.durable:
@@ -124,6 +123,10 @@ class QuiverPairCommand(Command):
 
         if self.verbose:
             args += ["--verbose"]
+
+        args += [
+            "--output", self.output_dir,
+        ]
 
         sender_args = ["quiver-arrow", "send", "--impl", self.sender_impl.name] + args
         receiver_args = ["quiver-arrow", "receive", "--impl", self.receiver_impl.name] + args
@@ -144,13 +147,13 @@ class QuiverPairCommand(Command):
             if not self.quiet:
                 self.print_status(sender, receiver)
 
-            _plano.wait_for_process(sender)
-            _plano.wait_for_process(receiver)
-        except:
+            _plano.check_process(receiver)
+            _plano.check_process(sender)
+        except _plano.CalledProcessError as e:
+            _plano.error(e)
+        finally:
             _plano.stop_process(sender)
             _plano.stop_process(receiver)
-
-            raise
 
         if (sender.returncode, receiver.returncode) != (0, 0):
             _plano.exit(1)
@@ -269,6 +272,7 @@ class QuiverPairCommand(Command):
 
         start_time = sender["results"]["first_send_time"]
         end_time = receiver["results"]["last_receive_time"]
+
         duration = (end_time - start_time) / 1000
         rate = None
 

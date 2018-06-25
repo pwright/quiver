@@ -88,26 +88,32 @@ class Client(object):
 
             if transactional:
                 session.commit()
-        finally:
+
             conn.close()
+        except ConnectionError as e:
+            # Ignore error from remote close
+            pass
+        except:
+            conn.close()
+            raise
 
     def send_messages(self, session):
         sender = session.sender(self.path)
         sender.capacity = self.credit_window
 
         while self.sent < self.messages and not self.stopping.is_set():
-            id_ = str(self.sent + 1)
+            id = str(self.sent + 1)
             stime = now()
-            record = "{},{}\n".format(id_, stime)
+            record = "{},{}\n".format(id, stime)
 
             message = Message(self.body)
-            message.id = id_
+            message.id = id
             message.properties[b"SendTime"] = stime
 
             if self.durable:
                 message.durable = True
 
-            sender.send(message)
+            sender.send(message, sync=False)
 
             sys.stdout.write(record)
 

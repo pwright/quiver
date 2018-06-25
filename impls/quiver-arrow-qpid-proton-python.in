@@ -107,7 +107,7 @@ class Handler(MessagingHandler):
         assert self.operation == "send"
 
         while event.sender.credit > 0 and self.sent < self.messages:
-            id = self.sent + 1
+            id = str(self.sent + 1)
             stime = now()
 
             message = Message(self.body)
