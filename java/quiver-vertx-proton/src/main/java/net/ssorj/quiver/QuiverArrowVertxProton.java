@@ -109,7 +109,7 @@ public class QuiverArrowVertxProton {
         final Vertx vertx = Vertx.vertx(new VertxOptions().setPreferNativeTransport(true));
         final ProtonClient client = ProtonClient.create(vertx);
 
-        client.connect(host, port, res -> {
+        client.connect(host, port, (res) -> {
                 if (res.succeeded()) {
                     final ProtonConnection connection = res.result();
 
@@ -157,7 +157,7 @@ public class QuiverArrowVertxProton {
 
         Arrays.fill(body, (byte) 120);
 
-        sender.sendQueueDrainHandler(s -> {
+        sender.sendQueueDrainHandler((s) -> {
                 try {
                     while (!sender.sendQueueFull()) {
                         final Message msg = Message.Factory.create();
