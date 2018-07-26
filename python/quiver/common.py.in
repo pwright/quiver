@@ -163,10 +163,10 @@ class Command(object):
 
     def add_common_test_arguments(self):
         self.parser.add_argument("-c", "--count", metavar="COUNT",
-                                 help="Send or receive COUNT messages",
+                                 help="Send or receive COUNT messages; 0 for no limit",
                                  default="1m")
         self.parser.add_argument("-d", "--duration", metavar="DURATION",
-                                 help="Stop after DURATION; 0 to disable",
+                                 help="Stop after DURATION, ignoring --count; 0 to disable",
                                  default="0")
         self.parser.add_argument("-m", "--messages", dest="count",
                                  help=_argparse.SUPPRESS)
@@ -204,6 +204,9 @@ class Command(object):
         self.transaction_size = self.parse_count(self.args.transaction_size)
         self.durable = self.args.durable
         self.timeout = self.parse_duration(self.args.timeout)
+
+        if self.duration != 0:
+            self.count = 0
 
     def init_common_tool_attributes(self):
         self.init_only = self.args.init_only

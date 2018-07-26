@@ -83,7 +83,6 @@ struct handler : public proton::messaging_handler {
     int messages;
     int body_size;
     int credit_window;
-
     bool durable;
 
     proton::connection connection;
@@ -94,8 +93,9 @@ struct handler : public proton::messaging_handler {
     int sent = 0;
     int received = 0;
     int accepted = 0;
+    bool stopping;
 
-    void on_container_start(proton::container& c) override {
+    void on_container_start(proton::container& cont) override {
         body = std::string(body_size, 'x');
 
         std::string domain = host + ":" + port;
@@ -104,9 +104,9 @@ struct handler : public proton::messaging_handler {
         opts.sasl_allowed_mechs("ANONYMOUS");
 
         if (connection_mode == "client") {
-            connection = c.connect(domain, opts);
+            connection = cont.connect(domain, opts);
         } else if (connection_mode == "server") {
-            listener = c.listen(domain, opts);
+            listener = cont.listen(domain, opts);
         } else {
             throw std::exception();
         }
@@ -114,63 +114,76 @@ struct handler : public proton::messaging_handler {
         start_time = now();
 
         if (seconds > 0) {
-            c.schedule(seconds * proton::duration::SECOND, [this] { stop(); });
+            cont.schedule(seconds * proton::duration::SECOND, [this] { stop(); });
         }
     }
 
-    void on_connection_open(proton::connection& c) override {
+    void on_connection_open(proton::connection& conn) override {
         if (channel_mode == "active") {
             if (operation == "send") {
-                c.open_sender(path);
+                conn.open_sender(path);
             } else if (operation == "receive") {
                 proton::receiver_options opts;
                 opts.credit_window(credit_window);
 
-                c.open_receiver(path, opts);
+                conn.open_receiver(path, opts);
             } else {
                 throw std::exception();
             }
-        } else {
-            connection = c;
+        } else if (channel_mode == "passive") {
+            connection = conn;
             connection.open();
+        } else {
+            throw new std::exception();
         }
     }
 
-    void on_receiver_open(proton::receiver& r) override {
+    void on_receiver_open(proton::receiver& rcv) override {
         proton::receiver_options ropts;
         proton::target_options topts;
 
-        topts.address(r.target().address());
+        topts.address(rcv.target().address());
 
         ropts.credit_window(credit_window);
         ropts.target(topts);
 
-        r.open(ropts);
+        rcv.open(ropts);
     }
 
-    void on_sendable(proton::sender& s) override {
+    void on_sendable(proton::sender& snd) override {
         assert (operation == "send");
 
-        while (s.credit() > 0 && sent < messages) {
+        if (stopping) {
+            return;
+        }
+
+        proton::message msg;
+
+        while (snd.credit() > 0) {
+            if (messages != 0 && sent == messages) {
+                break;
+            }
+
             std::string id = std::to_string(sent + 1);
             int64_t stime = now();
 
-            proton::message m(body);
-            m.id(id);
-            m.properties().put("SendTime", stime);
+            msg.clear();
+            msg.body(body);
+            msg.id(id);
+            msg.properties().put("SendTime", stime);
 
             if (durable) {
-                m.durable(true);
+                msg.durable(true);
             }
 
-            s.send(m);
+            snd.send(msg);
             sent++;
 
             std::cout << id << "," << stime << "\n";
         }
     }
 
-    void on_tracker_accept(proton::tracker& t) override {
+    void on_tracker_accept(proton::tracker& trk) override {
         accepted++;
 
         if (accepted == messages) {
@@ -178,17 +191,17 @@ struct handler : public proton::messaging_handler {
         }
     }
 
-    void on_message(proton::delivery& d, proton::message& m) override {
+    void on_message(proton::delivery& dlv, proton::message& msg) override {
         assert (operation == "receive");
 
-        if (received == messages) {
+        if (stopping) {
             return;
         }
 
         received++;
 
-        proton::message_id id = m.id();
-        proton::scalar stime = m.properties().get("SendTime");
+        proton::message_id id = msg.id();
+        proton::scalar stime = msg.properties().get("SendTime");
         int64_t rtime = now();
 
         std::cout << id << "," << stime << "," << rtime << "\n";
@@ -199,6 +212,8 @@ struct handler : public proton::messaging_handler {
     }
 
     void stop() {
+        stopping = true;
+
         if (!!connection) {
             connection.close();
         }
@@ -208,10 +223,10 @@ struct handler : public proton::messaging_handler {
         }
     }
 
-    void on_transport_error(proton::transport& t) override {
+    void on_transport_error(proton::transport& trans) override {
         // On server ignore errors from dummy connections to see if we are listening.
         if (connection_mode != "server") {
-            on_error(t.error());
+            on_error(trans.error());
         }
     }
 };

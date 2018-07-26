@@ -49,6 +49,7 @@ class Handler(MessagingHandler):
         self.body_size = None
         self.durable = False
 
+        self.connection = None
         self.listener = None
         self.body = None
 
@@ -56,20 +57,27 @@ class Handler(MessagingHandler):
         self.sent = 0
         self.received = 0
         self.accepted = 0
+        self.stopping = False
 
     def on_start(self, event):
         self.body = b"x" * self.body_size
 
-        domain = "{}:{}".format(self.host, self.port)
+        server = "{}:{}".format(self.host, self.port)
 
         if self.connection_mode == "client":
-            event.container.connect(domain, allowed_mechs="ANONYMOUS")
+            self.connection = event.container.connect(server, allowed_mechs="ANONYMOUS")
         elif self.connection_mode == "server":
-            self.listener = event.container.listen(domain)
+            self.listener = event.container.listen(server)
         else:
             raise Exception()
 
         self.start_time = time.time()
+
+        if self.seconds > 0:
+            event.container.schedule(self.seconds, self)
+
+    def on_timer_task(self, event):
+        self.stop(event)
 
     def on_connection_opened(self, event):
         if self.channel_mode == "active":
@@ -84,11 +92,10 @@ class Handler(MessagingHandler):
         # XXX Seems like this should happen by default
         event.connection.container = event.container.container_id
 
-    # XXX Should this be necessary?
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source.dynamic:
-                address = str(uuid.uuid4())
+                address = "{}/{}".format(event.connection.remote_container, event.link.name)
             else:
                 address = event.link.remote_source.address
 
@@ -106,14 +113,22 @@ class Handler(MessagingHandler):
     def on_sendable(self, event):
         assert self.operation == "send"
 
-        while event.sender.credit > 0 and self.sent < self.messages:
+        if self.stopping:
+            return
+
+        message = Message()
+
+        while event.sender.credit > 0:
+            if self.messages != 0 and self.sent == self.messages:
+                break
+
             id = str(self.sent + 1)
             stime = now()
 
-            message = Message(self.body)
+            message.clear()
+            message.body = self.body
             message.id = id
-            message.properties = dict() # Obnoxious
-            message.properties["SendTime"] = stime
+            message.properties = {"SendTime": stime}
 
             if self.durable:
                 message.durable = True
@@ -129,14 +144,10 @@ class Handler(MessagingHandler):
         if self.accepted == self.messages:
             self.stop(event)
 
-        if self.accepted % 1000 == 0:
-            if time.time() - self.start_time >= self.seconds:
-                self.stop(event)
-
     def on_message(self, event):
         assert self.operation == "receive"
 
-        if self.received == self.messages:
+        if self.stopping:
             return
 
         self.received += 1
@@ -150,17 +161,14 @@ class Handler(MessagingHandler):
         if self.received == self.messages:
             self.stop(event)
 
-        if self.received % 1000 == 0:
-            if time.time() - self.start_time >= self.seconds:
-                self.stop(event)
-
     def stop(self, event):
-        if self.connection_mode == "client":
-            event.connection.close()
-        elif self.connection_mode == "server":
+        self.stopping = True
+
+        if self.connection is not None:
+            self.connection.close()
+
+        if self.connection_mode == "server":
             self.listener.close()
-        else:
-            raise Exception()
 
 def main():
     set_message_threshold("warn")
@@ -177,7 +185,7 @@ def main():
     if transaction_size > 0:
         exit("This impl doesn't support transactions yet")
 
-    credit_window = int(ARGS[10])
+    credit_window = int(ARGS[11])
 
     handler = Handler(prefetch=credit_window)
     handler.connection_mode = ARGS[1]

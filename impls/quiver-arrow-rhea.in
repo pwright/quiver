@@ -65,6 +65,7 @@ let start_time;
 let sent = 0;
 let received = 0;
 let accepted = 0;
+let stopping = false;
 
 let connection;
 let listener;
@@ -94,6 +95,8 @@ function write(message) {
 }
 
 function stop() {
+    stopping = true;
+
     if (connection) {
         connection.close();
     }
@@ -150,17 +153,25 @@ container.on("receiver_open", function (event) {
 });
 
 container.on("sendable", function(event) {
-    while (event.sender.sendable() && sent < messages) {
+    if (stopping) {
+        return;
+    }
+
+    while (event.sender.sendable()) {
+        if (messages != 0 && sent == messages) {
+            break;
+        }
+
         let id = (sent + 1).toString();
         let stime = types.wrap_long(new Date().getTime());
 
         let message = {
             message_id: id,
             application_properties: {
-                SendTime: stime
+                SendTime: stime,
             },
             durable: durable,
-            body: body
+            body: body,
         };
 
         event.sender.send(message);
@@ -180,6 +191,10 @@ container.on("accepted", function(event) {
 });
 
 container.on("message", function(event) {
+    if (stopping) {
+        return;
+    }
+
     let message = event.message;
     let rtime = new Date().getTime();
     let stime = message.application_properties.SendTime;

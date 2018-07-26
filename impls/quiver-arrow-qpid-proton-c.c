@@ -73,6 +73,7 @@ struct arrow {
     size_t sent;
     size_t received;
     size_t accepted;
+    bool stopping;
 };
 
 void fail_(const char* file, int line, const char* fmt, ...) {
@@ -89,7 +90,18 @@ void fail_(const char* file, int line, const char* fmt, ...) {
 #define FAIL(...) fail_(__FILE__, __LINE__, __VA_ARGS__)
 #define ASSERT(EXPR) ((EXPR) ? (void)0 : FAIL("Failed assertion: %s", #EXPR))
 
+void eprint(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "\n");
+    fflush(stderr);
+}
+
 static void stop(struct arrow* a) {
+    a->stopping = true;
+
     if (a->connection) {
         pn_connection_close(a->connection);
     }
@@ -206,7 +218,6 @@ static void fail_if_condition(pn_event_t* e, pn_condition_t* cond) {
 
 static bool handle(struct arrow* a, pn_event_t* e) {
     switch (pn_event_type(e)) {
-
     case PN_LISTENER_OPEN:
         // TODO aconway 2017-06-12: listening notice
         // printf("listening\n");
@@ -268,33 +279,70 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         break;
     }
     case PN_LINK_FLOW: {
-        pn_link_t* l = pn_event_link(e);
-        while (pn_link_is_sender(l) && pn_link_credit(l) > 0 && a->sent < a->messages) {
-            send_message(a, l);
+        if (a->stopping) {
+            break;
         }
+
+        pn_link_t* link = pn_event_link(e);
+
+        if (pn_link_is_sender(link)) {
+            while (pn_link_credit(link) > 0) {
+                send_message(a, link);
+
+                if (a->sent == a->messages) {
+                    break;
+                }
+            }
+        }
+
         break;
     }
     case PN_DELIVERY: {
-        pn_delivery_t* d = pn_event_delivery(e);
-        pn_link_t* l = pn_delivery_link(d);
-        if (pn_link_is_sender(l)) { // Message acknowledged
-            ASSERT(PN_ACCEPTED == pn_delivery_remote_state(d));
-            pn_delivery_settle(d);
-            a->accepted++;
-            if (a->accepted >= a->messages) {
-                stop(a);
-            }
-        } else if (pn_link_is_receiver(l) && pn_delivery_readable(d) && !pn_delivery_partial(d)) {
-            decode_message(a->message, d, &a->buffer);
-            print_message(a->message);
-            pn_delivery_update(d, PN_ACCEPTED);
-            pn_delivery_settle(d);
-            a->received++;
-            if (a->received >= a->messages) {
-                stop(a);
-            }
-            pn_link_flow(l, a->credit_window - pn_link_credit(l));
+        if (a->stopping) {
+            break;
         }
+
+        pn_delivery_t* delivery = pn_event_delivery(e);
+        pn_link_t* link = pn_delivery_link(delivery);
+
+        if (pn_link_is_sender(link)) {
+            // Message acknowledged
+
+            ASSERT(pn_delivery_remote_state(delivery) == PN_ACCEPTED);
+
+            pn_delivery_settle(delivery);
+
+            a->accepted++;
+
+            if (a->accepted == a->messages) {
+                stop(a);
+                break;
+            }
+        } else if (pn_link_is_receiver(link)) {
+            if (!pn_delivery_readable(delivery) || pn_delivery_partial(delivery)) {
+                break;
+            }
+
+            // Message received
+
+            decode_message(a->message, delivery, &a->buffer);
+            print_message(a->message);
+
+            pn_delivery_update(delivery, PN_ACCEPTED);
+            pn_delivery_settle(delivery);
+
+            a->received++;
+
+            if (a->received == a->messages) {
+                stop(a);
+                break;
+            }
+
+            pn_link_flow(link, a->credit_window - pn_link_credit(link));
+        } else {
+            FAIL("Unexpected");
+        }
+
         break;
     }
     case PN_TRANSPORT_CLOSED:

@@ -105,14 +105,18 @@ class QuiverPairCommand(Command):
         self.init_common_tool_attributes()
 
     def run(self):
-        args = [
-            self.url,
-            "--count", str(self.args.count),
-            "--duration", str(self.args.duration),
-            "--body-size", str(self.args.body_size),
-            "--credit", str(self.args.credit),
-            "--transaction-size", str(self.args.transaction_size),
-            "--timeout", str(self.args.timeout),
+        args = [self.url]
+
+        if self.duration == 0:
+            args += ["--count", self.args.count]
+        else:
+            args += ["--duration", self.args.duration]
+
+        args += [
+            "--body-size", self.args.body_size,
+            "--credit", self.args.credit,
+            "--transaction-size", self.args.transaction_size,
+            "--timeout", self.args.timeout,
         ]
 
         if self.durable:
@@ -124,9 +128,7 @@ class QuiverPairCommand(Command):
         if self.verbose:
             args += ["--verbose"]
 
-        args += [
-            "--output", self.output_dir,
-        ]
+        args += ["--output", self.output_dir]
 
         sender_args = ["quiver-arrow", "send", "--impl", self.sender_impl.name] + args
         receiver_args = ["quiver-arrow", "receive", "--impl", self.receiver_impl.name] + args
