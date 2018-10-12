@@ -105,7 +105,7 @@ class QuiverPairCommand(Command):
         self.init_common_tool_attributes()
 
     def run(self):
-        args = [self.url]
+        args = list()
 
         if self.duration == 0:
             args += ["--count", self.args.count]
@@ -130,8 +130,8 @@ class QuiverPairCommand(Command):
 
         args += ["--output", self.output_dir]
 
-        sender_args = ["quiver-arrow", "send", "--impl", self.sender_impl.name] + args
-        receiver_args = ["quiver-arrow", "receive", "--impl", self.receiver_impl.name] + args
+        sender_args = ["quiver-arrow", "send", self.url, "--impl", self.sender_impl.name] + args
+        receiver_args = ["quiver-arrow", "receive", self.url, "--impl", self.receiver_impl.name] + args
 
         if self.peer_to_peer:
             receiver_args += ["--server", "--passive"]
