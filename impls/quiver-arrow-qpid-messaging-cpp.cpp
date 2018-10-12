@@ -69,8 +69,8 @@ struct Client {
     std::string host;
     std::string port;
     std::string path;
-    std::chrono::seconds seconds;
-    int messages;
+    std::chrono::seconds desired_duration;
+    int desired_count;
     int body_size;
     int credit_window;
     int transaction_size;
@@ -101,9 +101,9 @@ void Client::run() {
 
     start_time = now();
 
-    if (seconds > std::chrono::seconds::zero()) {
+    if (desired_duration > std::chrono::seconds::zero()) {
         std::thread timer([this]() {
-                std::this_thread::sleep_for(seconds);
+                std::this_thread::sleep_for(desired_duration);
                 stopping = true;
             });
 
@@ -146,7 +146,7 @@ void Client::sendMessages(Session& session) {
 
     std::string body(body_size, 'x');
 
-    while (sent < messages && !stopping) {
+    while (!stopping) {
         std::string id = std::to_string(sent + 1);
         int64_t stime = now();
 
@@ -167,6 +167,10 @@ void Client::sendMessages(Session& session) {
         if (transaction_size > 0 && (sent % transaction_size) == 0) {
             session.commit();
         }
+
+        if (sent == desired_count) {
+            break;
+        }
     }
 }
 
@@ -176,13 +180,15 @@ void Client::receiveMessages(Session& session) {
 
     Message message;
 
-    while (received < messages && !stopping) {
+    while (!stopping) {
         if (receiver.getAvailable() == 0) {
             continue;
         }
 
         receiver.get(message);
+
         received++;
+
         session.acknowledge();
 
         std::string id = message.getMessageId();
@@ -193,6 +199,10 @@ void Client::receiveMessages(Session& session) {
 
         if (transaction_size > 0 && (received % transaction_size) == 0) {
             session.commit();
+        }
+
+        if (received == desired_count) {
+            break;
         }
     }
 }
@@ -223,8 +233,8 @@ int main(int argc, char** argv) {
     client.host = argv[5];
     client.port = argv[6];
     client.path = argv[7];
-    client.seconds = std::chrono::seconds(std::atoi(argv[8]));
-    client.messages = std::atoi(argv[9]);
+    client.desired_duration = std::chrono::seconds(std::atoi(argv[8]));
+    client.desired_count = std::atoi(argv[9]);
     client.body_size = std::atoi(argv[10]);
     client.credit_window = std::atoi(argv[11]);
     client.transaction_size = std::atoi(argv[12]);

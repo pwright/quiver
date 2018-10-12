@@ -32,7 +32,6 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/target_options.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/transfer.hpp>
 #include <proton/transport.hpp>
@@ -79,8 +78,8 @@ struct handler : public proton::messaging_handler {
     std::string host;
     std::string port;
     std::string path;
-    int seconds;
-    int messages;
+    int desired_duration;
+    int desired_count;
     int body_size;
     int credit_window;
     bool durable;
@@ -113,8 +112,8 @@ struct handler : public proton::messaging_handler {
 
         start_time = now();
 
-        if (seconds > 0) {
-            cont.schedule(seconds * proton::duration::SECOND, [this] { stop(); });
+        if (desired_duration > 0) {
+            cont.schedule(desired_duration * proton::duration::SECOND, [this] { stop(); });
         }
     }
 
@@ -160,7 +159,7 @@ struct handler : public proton::messaging_handler {
         proton::message msg;
 
         while (snd.credit() > 0) {
-            if (messages != 0 && sent == messages) {
+            if (desired_count != 0 && sent == desired_count) {
                 break;
             }
 
@@ -177,6 +176,7 @@ struct handler : public proton::messaging_handler {
             }
 
             snd.send(msg);
+
             sent++;
 
             std::cout << id << "," << stime << "\n";
@@ -186,7 +186,7 @@ struct handler : public proton::messaging_handler {
     void on_tracker_accept(proton::tracker& trk) override {
         accepted++;
 
-        if (accepted == messages) {
+        if (accepted == desired_count) {
             stop();
         }
     }
@@ -206,7 +206,7 @@ struct handler : public proton::messaging_handler {
 
         std::cout << id << "," << stime << "," << rtime << "\n";
 
-        if (received == messages) {
+        if (received == desired_count) {
             stop();
         }
     }
@@ -257,8 +257,8 @@ int main(int argc, char** argv) {
     h.port = argv[6];
     h.path = argv[7];
 
-    h.seconds = std::atoi(argv[8]);
-    h.messages = std::atoi(argv[9]);
+    h.desired_duration = std::atoi(argv[8]);
+    h.desired_count = std::atoi(argv[9]);
     h.body_size = std::atoi(argv[10]);
     h.credit_window = std::atoi(argv[11]);
 

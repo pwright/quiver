@@ -73,8 +73,8 @@ public class QuiverArrowVertxProton {
         final String host = args[4];
         final int port = Integer.parseInt(args[5]);
         final String path = args[6];
-        final int seconds = Integer.parseInt(args[7]);
-        final int messages = Integer.parseInt(args[8]);
+        final int desiredDuration = Integer.parseInt(args[7]);
+        final int desiredCount = Integer.parseInt(args[8]);
         final int bodySize = Integer.parseInt(args[9]);
         final int creditWindow = Integer.parseInt(args[10]);
         final int transactionSize = Integer.parseInt(args[11]);
@@ -118,16 +118,16 @@ public class QuiverArrowVertxProton {
                             completionLatch.countDown();
                         });
 
-                    if (seconds > 0) {
-                        vertx.setTimer(seconds * 1000, timerId -> {
+                    if (desiredDuration > 0) {
+                        vertx.setTimer(desiredDuration * 1000, timerId -> {
                                 stopping.lazySet(true);
                             });
                     }
 
                     if (sender) {
-                        send(connection, path, messages, bodySize, durable, stopping);
+                        send(connection, path, desiredCount, bodySize, durable, stopping);
                     } else {
-                        receive(connection, path, messages, creditWindow, stopping);
+                        receive(connection, path, desiredCount, creditWindow, stopping);
                     }
                 } else {
                     res.cause().printStackTrace();
@@ -147,11 +147,11 @@ public class QuiverArrowVertxProton {
     }
 
     private static void send(final ProtonConnection connection, final String address,
-                             final int messages, final int bodySize, final boolean durable,
+                             final int desiredCount, final int bodySize, final boolean durable,
                              final AtomicBoolean stopping) {
         final StringBuilder line = new StringBuilder();
         final BufferedWriter out = getWriter();
-        final AtomicLong count = new AtomicLong(1);
+        final AtomicLong count = new AtomicLong(0);
         final ProtonSender sender = connection.createSender(address);
         final byte[] body = new byte[bodySize];
 
@@ -176,13 +176,15 @@ public class QuiverArrowVertxProton {
                         }
 
                         sender.send(msg);
+                        count.incrementAndGet();
 
                         line.setLength(0);
                         out.append(line.append(id).append(',').append(stime).append('\n'));
 
-                        if (count.getAndIncrement() >= messages || stopping.get()) {
+                        if (count.get() == desiredCount || stopping.get()) {
                             out.flush();
                             connection.close();
+                            break;
                         }
                     }
                 } catch (IOException e) {
@@ -195,11 +197,11 @@ public class QuiverArrowVertxProton {
     }
 
     private static void receive(final ProtonConnection connection, final String address,
-                                final int messages, final int creditWindow,
+                                final int desiredCount, final int creditWindow,
                                 final AtomicBoolean stopping) {
         final StringBuilder line = new StringBuilder();
         final BufferedWriter out = getWriter();
-        final AtomicInteger count = new AtomicInteger(1);
+        final AtomicInteger count = new AtomicInteger(0);
         final ProtonReceiver receiver = connection.createReceiver(address);
 
         int creditTopUpThreshold = Math.max(1, creditWindow / 2);
@@ -207,6 +209,8 @@ public class QuiverArrowVertxProton {
         receiver.setAutoAccept(false).setPrefetch(0).flow(creditWindow);
         receiver.handler((delivery, msg) -> {
                 try {
+                    count.incrementAndGet();
+
                     final Object id = msg.getMessageId();
                     final long stime = (Long) msg.getApplicationProperties().getValue().get("SendTime");
                     final long rtime = System.currentTimeMillis();
@@ -221,7 +225,7 @@ public class QuiverArrowVertxProton {
                         receiver.flow(creditWindow - credit);
                     }
 
-                    if (count.getAndIncrement() >= messages || stopping.get()) {
+                    if (count.get() == desiredCount || stopping.get()) {
                         out.flush();
                         connection.close();
                     }

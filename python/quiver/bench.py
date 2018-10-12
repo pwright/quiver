@@ -161,9 +161,8 @@ class QuiverBenchCommand(Command):
         if self.client_server:
             for sender_impl in self.sender_impls:
                 for receiver_impl in self.receiver_impls:
-                    if not self.mixed_pairs:
-                        if sender_impl != receiver_impl:
-                            continue
+                    if not self.mixed_pairs and sender_impl != receiver_impl:
+                        continue
 
                     if sender_impl in OPENWIRE_ARROW_IMPLS:
                         if receiver_impl not in OPENWIRE_ARROW_IMPLS:

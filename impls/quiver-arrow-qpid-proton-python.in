@@ -44,8 +44,8 @@ class Handler(MessagingHandler):
         self.host = None
         self.port = None
         self.path = None
-        self.seconds = None
-        self.messages = None
+        self.desired_duration = None
+        self.desired_count = None
         self.body_size = None
         self.durable = False
 
@@ -73,8 +73,8 @@ class Handler(MessagingHandler):
 
         self.start_time = time.time()
 
-        if self.seconds > 0:
-            event.container.schedule(self.seconds, self)
+        if self.desired_duration > 0:
+            event.container.schedule(self.desired_duration, self)
 
     def on_timer_task(self, event):
         self.stop(event)
@@ -119,7 +119,7 @@ class Handler(MessagingHandler):
         message = Message()
 
         while event.sender.credit > 0:
-            if self.messages != 0 and self.sent == self.messages:
+            if self.desired_count != 0 and self.sent == self.desired_count:
                 break
 
             id = str(self.sent + 1)
@@ -141,7 +141,7 @@ class Handler(MessagingHandler):
     def on_accepted(self, event):
         self.accepted += 1
 
-        if self.accepted == self.messages:
+        if self.accepted == self.desired_count:
             self.stop(event)
 
     def on_message(self, event):
@@ -158,7 +158,7 @@ class Handler(MessagingHandler):
 
         sys.stdout.write("{},{},{}\n".format(message.id, stime, rtime))
 
-        if self.received == self.messages:
+        if self.received == self.desired_count:
             self.stop(event)
 
     def stop(self, event):
@@ -194,8 +194,8 @@ def main():
     handler.host = ARGS[5]
     handler.port = ARGS[6]
     handler.path = ARGS[7]
-    handler.seconds = int(ARGS[8])
-    handler.messages = int(ARGS[9])
+    handler.desired_duration = int(ARGS[8])
+    handler.desired_count = int(ARGS[9])
     handler.body_size = int(ARGS[10])
 
     flags = ARGS[13].split(",")

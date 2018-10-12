@@ -41,8 +41,8 @@ class Client(object):
         self.host = None
         self.port = None
         self.path = None
-        self.seconds = None
-        self.messages = None
+        self.desired_duration = None
+        self.desired_count = None
         self.body_size = None
         self.credit_window = None
         self.transaction_size = None
@@ -68,11 +68,11 @@ class Client(object):
 
         self.start_time = now()
 
-        if self.seconds > 0:
+        if self.desired_duration > 0:
             def task():
                 self.stopping.set()
 
-            timer = threading.Timer(self.seconds, task)
+            timer = threading.Timer(self.desired_duration, task)
             timer.start()
 
         try:
@@ -101,7 +101,7 @@ class Client(object):
         sender = session.sender(self.path)
         sender.capacity = self.credit_window
 
-        while self.sent < self.messages and not self.stopping.is_set():
+        while not self.stopping.is_set():
             id = str(self.sent + 1)
             stime = now()
             record = "{},{}\n".format(id, stime)
@@ -115,22 +115,28 @@ class Client(object):
 
             sender.send(message, sync=False)
 
-            sys.stdout.write(record)
-
             self.sent +=1
+
+            sys.stdout.write(record)
 
             if self.transaction_size > 0 and (self.sent % self.transaction_size) == 0:
                 session.commit()
+
+            if self.sent == self.desired_count:
+                break
 
     def receive_messages(self, session):
         receiver = session.receiver(self.path)
         receiver.capacity = self.credit_window
 
-        while self.received < self.messages and not self.stopping.is_set():
+        while not self.stopping.is_set():
             if receiver.available() == 0:
                 continue
 
             message = receiver.get()
+
+            self.received +=1
+
             session.acknowledge()
 
             stime = message.properties["SendTime"]
@@ -139,10 +145,11 @@ class Client(object):
 
             sys.stdout.write(record)
 
-            self.received +=1
-
             if self.transaction_size > 0 and (self.received % self.transaction_size) == 0:
                 session.commit()
+
+            if self.received == self.desired_count:
+                break
 
 def main():
     set_message_threshold("warn")
@@ -166,8 +173,8 @@ def main():
     client.host = ARGS[5]
     client.port = ARGS[6]
     client.path = ARGS[7]
-    client.seconds = int(ARGS[8])
-    client.messages = int(ARGS[9])
+    client.desired_duration = int(ARGS[8])
+    client.desired_count = int(ARGS[9])
     client.body_size = int(ARGS[10])
     client.credit_window = int(ARGS[11])
     client.transaction_size = int(ARGS[12])

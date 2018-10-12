@@ -23,7 +23,7 @@ from plano import *
 from quiver.common import *
 
 def open_test_session(session):
-    set_message_threshold("error")
+    set_message_threshold("warn")
 
 def test_common_options(session):
     commands = [
@@ -67,25 +67,63 @@ def disabled_test_quiver_launch_client_server(session):
 def disabled_test_quiver_launch_peer_to_peer(session):
     call("quiver-launch --sender-options=\"--count 1\" --receiver-options=\"--count 1 --server --passive\" --verbose {}", _test_url())
 
-def test_quiver_pair_client_server(session):
-    # XXX full matrix
+def test_quiver_matching_pairs_client_server_count(session):
+    for impl in AMQP_ARROW_IMPLS:
+        if not impl_exists(impl):
+            continue
 
-    with _TestServer() as server:
-        call("quiver {} --arrow qpid-proton-python --count 1 --verbose", server.url)
+        with _TestServer() as server:
+            call("quiver {} --arrow {} --count 1 --verbose", server.url, impl)
 
-        if impl_exists("qpid-jms"):
-            call("quiver {} --arrow qpid-jms --count 1 --verbose", server.url)
+def test_quiver_matching_pairs_client_server_duration(session):
+    for impl in AMQP_ARROW_IMPLS:
+        if not impl_exists(impl):
+            continue
 
-        if impl_exists("vertx-proton"):
-            call("quiver {} --arrow vertx-proton --count 1 --verbose", server.url)
+        if impl in ("qpid-jms", "vertx-proton"):
+            # XXX Trouble
+            continue
 
-def test_quiver_pair_peer_to_peer(session):
-    # XXX full matrix
+        with _TestServer() as server:
+            call("quiver {} --arrow {} --duration 1 --verbose", server.url, impl)
 
-    call("quiver {} --arrow qpid-proton-python --count 1 --peer-to-peer --verbose", _test_url())
+def test_quiver_mixed_pairs_peer_to_peer_count(session):
+    for sender_impl in AMQP_ARROW_IMPLS:
+        if not impl_exists(sender_impl):
+            continue
 
-    if impl_exists("rhea"):
-        call("quiver {} --arrow rhea --count 1 --peer-to-peer --verbose", _test_url())
+        for receiver_impl in PEER_TO_PEER_ARROW_IMPLS:
+            if not impl_exists(receiver_impl):
+                continue
+
+            if sender_impl in ("qpid-proton-c", "qpid-messaging-cpp", "qpid-messaging-python"):
+                if receiver_impl in ("rhea"):
+                    # XXX Trouble
+                    continue
+
+            call("quiver {} --sender {} --receiver {} --count 1 --peer-to-peer --verbose",
+                 _test_url(), sender_impl, receiver_impl)
+
+def test_quiver_mixed_pairs_peer_to_peer_duration(session):
+    for sender_impl in AMQP_ARROW_IMPLS:
+        if not impl_exists(sender_impl):
+            continue
+
+        for receiver_impl in PEER_TO_PEER_ARROW_IMPLS:
+            if not impl_exists(receiver_impl):
+                continue
+
+            if sender_impl in ("qpid-proton-c", "qpid-messaging-cpp", "qpid-messaging-python"):
+                if receiver_impl in ("rhea"):
+                    # XXX Trouble
+                    continue
+
+            if sender_impl in ("qpid-proton-c"):
+                # XXX More trouble
+                continue
+
+            call("quiver {} --sender {} --receiver {} --duration 1 --peer-to-peer --verbose",
+                 _test_url(), sender_impl, receiver_impl)
 
 def test_quiver_bench_client_server(session):
     with temp_dir() as output:
@@ -93,7 +131,6 @@ def test_quiver_bench_client_server(session):
             "quiver-bench",
             "--count", "1",
             "--client-server",
-            "--mixed-pairs",
             "--include-servers", "builtin",
             "--exclude-servers", "none",
             "--verbose",
@@ -108,8 +145,6 @@ def test_quiver_bench_peer_to_peer(session):
             "quiver-bench",
             "--count", "1",
             "--peer-to-peer",
-            "--mixed-pairs",
-            "--exclude-receivers", "rhea",
             "--verbose",
             "--output", output,
         ]

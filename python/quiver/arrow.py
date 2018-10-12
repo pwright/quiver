@@ -252,6 +252,8 @@ class QuiverArrowCommand(Command):
         checkpoint = self.timeout_checkpoint
         since = (snap.timestamp - checkpoint.timestamp) / 1000
 
+        #print("check_timeout", snap.count, "==", checkpoint.count, "and", since, ">", self.timeout)
+
         if snap.count == checkpoint.count and since > self.timeout:
             raise CommandError("{} timed out", self.role)
 

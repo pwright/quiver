@@ -57,8 +57,8 @@ struct arrow {
     const char* host;
     const char* port;
     const char* path;
-    uint32_t seconds;
-    size_t messages;
+    uint32_t desired_duration;
+    size_t desired_count;
     size_t body_size;
     size_t credit_window;
     bool durable;
@@ -72,7 +72,7 @@ struct arrow {
     time_t start_time;
     size_t sent;
     size_t received;
-    size_t accepted;
+    size_t acknowledged;
     bool stopping;
 };
 
@@ -289,7 +289,7 @@ static bool handle(struct arrow* a, pn_event_t* e) {
             while (pn_link_credit(link) > 0) {
                 send_message(a, link);
 
-                if (a->sent == a->messages) {
+                if (a->sent == a->desired_count) {
                     break;
                 }
             }
@@ -308,13 +308,11 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         if (pn_link_is_sender(link)) {
             // Message acknowledged
 
-            ASSERT(pn_delivery_remote_state(delivery) == PN_ACCEPTED);
-
             pn_delivery_settle(delivery);
 
-            a->accepted++;
+            a->acknowledged++;
 
-            if (a->accepted == a->messages) {
+            if (a->acknowledged == a->desired_count) {
                 stop(a);
                 break;
             }
@@ -333,7 +331,7 @@ static bool handle(struct arrow* a, pn_event_t* e) {
 
             a->received++;
 
-            if (a->received == a->messages) {
+            if (a->received == a->desired_count) {
                 stop(a);
                 break;
             }
@@ -387,8 +385,8 @@ static bool handle(struct arrow* a, pn_event_t* e) {
 }
 
 void run(struct arrow* a) {
-    if (a->seconds > 0) {
-        pn_proactor_set_timeout(a->proactor, a->seconds * 1000);
+    if (a->desired_duration > 0) {
+        pn_proactor_set_timeout(a->proactor, a->desired_duration * 1000);
     }
 
     while(true) {
@@ -442,8 +440,8 @@ int main(int argc, char** argv) {
     a.host = argv[5];
     a.port = argv[6];
     a.path = argv[7];
-    a.seconds = atoi(argv[8]);
-    a.messages = atoi(argv[9]);
+    a.desired_duration = atoi(argv[8]);
+    a.desired_count = atoi(argv[9]);
     a.body_size = atoi(argv[10]);
     a.credit_window = atoi(argv[11]);
     a.durable = false;

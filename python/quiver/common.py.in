@@ -121,6 +121,7 @@ def impl_exists(name):
 
 ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow"]
 PEER_TO_PEER_ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow" and x.peer_to_peer]
+AMQP_ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow" and "amqp" in x.protocols]
 OPENWIRE_ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow" and "openwire" in x.protocols]
 CORE_PROTOCOL_ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow" and "core" in x.protocols]
 

@@ -40,8 +40,8 @@ public class QuiverArrowJms {
         final String channelMode = args[1];
         final String operation = args[2];
         final String path = args[6];
-        final int seconds = Integer.parseInt(args[7]);
-        final int messages = Integer.parseInt(args[8]);
+        final int desiredDuration = Integer.parseInt(args[7]);
+        final int desiredCount = Integer.parseInt(args[8]);
         final int bodySize = Integer.parseInt(args[9]);
         final int transactionSize = Integer.parseInt(args[11]);
         final String[] flags = args[12].split(",");
@@ -66,7 +66,7 @@ public class QuiverArrowJms {
         final ConnectionFactory factory = (ConnectionFactory) context.lookup("ConnectionFactory");
         final Destination queue = (Destination) context.lookup("queueLookup");
 
-        final Client client = new Client(factory, queue, operation, seconds, messages, bodySize,
+        final Client client = new Client(factory, queue, operation, desiredDuration, desiredCount, bodySize,
                                          transactionSize, flags);
 
         client.run();
@@ -77,8 +77,8 @@ class Client {
     protected final ConnectionFactory factory;
     protected final Destination queue;
     protected final String operation;
-    protected final int seconds;
-    protected final int messages;
+    protected final int desiredDuration;
+    protected final int desiredCount;
     protected final int bodySize;
     protected final int transactionSize;
 
@@ -89,13 +89,13 @@ class Client {
     protected final AtomicBoolean stopping = new AtomicBoolean();
 
     Client(final ConnectionFactory factory, final Destination queue, final String operation,
-           final int seconds, final int messages, final int bodySize,
+           final int desiredDuration, final int desiredCount, final int bodySize,
            final int transactionSize, final String[] flags) {
         this.factory = factory;
         this.queue = queue;
         this.operation = operation;
-        this.seconds = seconds;
-        this.messages = messages;
+        this.desiredDuration = desiredDuration;
+        this.desiredCount = desiredCount;
         this.bodySize = bodySize;
         this.transactionSize = transactionSize;
 
@@ -108,7 +108,7 @@ class Client {
 
             conn.start();
 
-            if (seconds > 0) {
+            if (desiredDuration > 0) {
                 final Timer timer = new Timer(true);
                 final TimerTask task = new TimerTask() {
                         public void run() {
@@ -116,7 +116,7 @@ class Client {
                         }
                     };
 
-                timer.schedule(task, seconds * 1000);
+                timer.schedule(task, desiredDuration * 1000);
             }
 
             final Session session;
@@ -172,7 +172,7 @@ class Client {
 
         producer.setDisableMessageTimestamp(true);
 
-        while (sent < messages && !stopping.get()) {
+        while (!stopping.get()) {
             final BytesMessage message = session.createBytesMessage();
             final long stime = System.currentTimeMillis();
 
@@ -180,13 +180,18 @@ class Client {
             message.setLongProperty("SendTime", stime);
 
             producer.send(message);
-            line.setLength(0);
-            out.append(line.append(message.getJMSMessageID()).append(',').append(stime).append('\n'));
 
             sent += 1;
 
+            line.setLength(0);
+            out.append(line.append(message.getJMSMessageID()).append(',').append(stime).append('\n'));
+
             if (transactionSize > 0 && (sent % transactionSize) == 0) {
                 session.commit();
+            }
+
+            if (sent == desiredCount) {
+                break;
             }
         }
 
@@ -198,12 +203,14 @@ class Client {
         final BufferedWriter out = getWriter();
         final MessageConsumer consumer = session.createConsumer(queue);
 
-        while (received < messages && !stopping.get()) {
+        while (!stopping.get()) {
             final Message message = consumer.receive();
 
             if (message == null) {
                 throw new RuntimeException("Null receive");
             }
+
+            received += 1;
 
             final String id = message.getJMSMessageID();
             final long stime = message.getLongProperty("SendTime");
@@ -212,10 +219,12 @@ class Client {
             line.setLength(0);
             out.append(line.append(id).append(',').append(stime).append(',').append(rtime).append('\n'));
 
-            received += 1;
-
             if (transactionSize > 0 && (received % transactionSize) == 0) {
                 session.commit();
+            }
+
+            if (received == desiredCount) {
+                break;
             }
         }
 
