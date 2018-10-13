@@ -80,10 +80,6 @@ def test_quiver_matching_pairs_client_server_duration(session):
         if not impl_available(impl):
             continue
 
-        if impl in ("qpid-jms", "vertx-proton"):
-            # XXX Trouble
-            continue
-
         with _TestServer() as server:
             call("quiver {} --arrow {} --duration 1 --verbose", server.url, impl)
 

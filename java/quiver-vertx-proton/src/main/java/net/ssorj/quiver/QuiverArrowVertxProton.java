@@ -29,9 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedLong;
@@ -104,7 +102,6 @@ public class QuiverArrowVertxProton {
             throw new java.lang.IllegalStateException("Unknown operation: " + operation);
         }
 
-        final AtomicBoolean stopping = new AtomicBoolean();
         final CountDownLatch completionLatch = new CountDownLatch(1);
         final Vertx vertx = Vertx.vertx(new VertxOptions().setPreferNativeTransport(true));
         final ProtonClient client = ProtonClient.create(vertx);
@@ -120,14 +117,14 @@ public class QuiverArrowVertxProton {
 
                     if (desiredDuration > 0) {
                         vertx.setTimer(desiredDuration * 1000, timerId -> {
-                                stopping.lazySet(true);
+                                connection.close();
                             });
                     }
 
                     if (sender) {
-                        send(connection, path, desiredCount, bodySize, durable, stopping);
+                        send(connection, path, desiredCount, bodySize, durable);
                     } else {
-                        receive(connection, path, desiredCount, creditWindow, stopping);
+                        receive(connection, path, desiredCount, creditWindow);
                     }
                 } else {
                     res.cause().printStackTrace();
@@ -147,11 +144,10 @@ public class QuiverArrowVertxProton {
     }
 
     private static void send(final ProtonConnection connection, final String address,
-                             final int desiredCount, final int bodySize, final boolean durable,
-                             final AtomicBoolean stopping) {
+                             final int desiredCount, final int bodySize, final boolean durable) {
         final StringBuilder line = new StringBuilder();
         final BufferedWriter out = getWriter();
-        final AtomicLong count = new AtomicLong(0);
+        final AtomicInteger count = new AtomicInteger(0);
         final ProtonSender sender = connection.createSender(address);
         final byte[] body = new byte[bodySize];
 
@@ -159,33 +155,35 @@ public class QuiverArrowVertxProton {
 
         sender.sendQueueDrainHandler((s) -> {
                 try {
-                    while (!sender.sendQueueFull()) {
-                        final Message msg = Message.Factory.create();
-                        final String id = String.valueOf(count.get());
-                        final long stime = System.currentTimeMillis();
-                        final Map<String, Object> props = new HashMap<>();
+                    try {
+                        while (!sender.sendQueueFull()) {
+                            final Message msg = Message.Factory.create();
+                            final String id = String.valueOf(count.get());
+                            final long stime = System.currentTimeMillis();
+                            final Map<String, Object> props = new HashMap<>();
 
-                        props.put("SendTime", stime);
+                            props.put("SendTime", stime);
 
-                        msg.setMessageId(id);
-                        msg.setBody(new Data(new Binary(body)));
-                        msg.setApplicationProperties(new ApplicationProperties(props));
+                            msg.setMessageId(id);
+                            msg.setBody(new Data(new Binary(body)));
+                            msg.setApplicationProperties(new ApplicationProperties(props));
 
-                        if (durable) {
-                            msg.setDurable(true);
+                            if (durable) {
+                                msg.setDurable(true);
+                            }
+
+                            sender.send(msg);
+
+                            line.setLength(0);
+                            out.append(line.append(id).append(',').append(stime).append('\n'));
+
+                            if (count.incrementAndGet() == desiredCount) {
+                                connection.close();
+                                return;
+                            }
                         }
-
-                        sender.send(msg);
-                        count.incrementAndGet();
-
-                        line.setLength(0);
-                        out.append(line.append(id).append(',').append(stime).append('\n'));
-
-                        if (count.get() == desiredCount || stopping.get()) {
-                            out.flush();
-                            connection.close();
-                            break;
-                        }
+                    } finally {
+                        out.flush();
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -197,8 +195,7 @@ public class QuiverArrowVertxProton {
     }
 
     private static void receive(final ProtonConnection connection, final String address,
-                                final int desiredCount, final int creditWindow,
-                                final AtomicBoolean stopping) {
+                                final int desiredCount, final int creditWindow) {
         final StringBuilder line = new StringBuilder();
         final BufferedWriter out = getWriter();
         final AtomicInteger count = new AtomicInteger(0);
@@ -209,25 +206,27 @@ public class QuiverArrowVertxProton {
         receiver.setAutoAccept(false).setPrefetch(0).flow(creditWindow);
         receiver.handler((delivery, msg) -> {
                 try {
-                    count.incrementAndGet();
+                    try {
+                        final Object id = msg.getMessageId();
+                        final long stime = (Long) msg.getApplicationProperties().getValue().get("SendTime");
+                        final long rtime = System.currentTimeMillis();
 
-                    final Object id = msg.getMessageId();
-                    final long stime = (Long) msg.getApplicationProperties().getValue().get("SendTime");
-                    final long rtime = System.currentTimeMillis();
+                        line.setLength(0);
+                        out.append(line.append(id).append(',').append(stime).append(',').append(rtime).append('\n'));
 
-                    line.setLength(0);
-                    out.append(line.append(id).append(',').append(stime).append(',').append(rtime).append('\n'));
+                        delivery.disposition(ACCEPTED, true);
 
-                    delivery.disposition(ACCEPTED, true);
+                        int credit = receiver.getCredit();
+                        if(credit < creditTopUpThreshold) {
+                            receiver.flow(creditWindow - credit);
+                        }
 
-                    int credit = receiver.getCredit();
-                    if(credit < creditTopUpThreshold) {
-                        receiver.flow(creditWindow - credit);
-                    }
-
-                    if (count.get() == desiredCount || stopping.get()) {
+                        if (count.incrementAndGet() == desiredCount) {
+                            connection.close();
+                            return;
+                        }
+                    } finally {
                         out.flush();
-                        connection.close();
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
