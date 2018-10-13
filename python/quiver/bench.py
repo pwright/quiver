@@ -136,17 +136,17 @@ class QuiverBenchCommand(Command):
             server_impls -= self.parse_impls(self.args.exclude_servers)
 
         for name in list(sender_impls):
-            if not impl_exists(name):
+            if not impl_available(name):
                 _plano.warn("No implementation for '{}'; skipping it", name)
                 sender_impls.remove(name)
 
         for name in list(receiver_impls):
-            if not impl_exists(name):
+            if not impl_available(name):
                 _plano.warn("No implementation for '{}'; skipping it", name)
                 receiver_impls.remove(name)
 
         for name in list(server_impls):
-            if not impl_exists(name):
+            if not impl_available(name):
                 _plano.warn("No implementation for '{}'; skipping it", name)
                 server_impls.remove(name)
 

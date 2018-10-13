@@ -43,12 +43,12 @@ def test_quiver_arrow(session):
     call("quiver-arrow --init-only receive q0")
 
     for impl in ARROW_IMPLS:
-        if impl_exists(impl):
+        if impl_available(impl):
             call("quiver-arrow --impl {} --impl-info", impl)
 
 def test_quiver_server(session):
     for impl in SERVER_IMPLS:
-        if not impl_exists(impl):
+        if not impl_available(impl):
             continue
 
         call("quiver-server --impl {} --impl-info", impl)
@@ -69,7 +69,7 @@ def disabled_test_quiver_launch_peer_to_peer(session):
 
 def test_quiver_matching_pairs_client_server_count(session):
     for impl in AMQP_ARROW_IMPLS:
-        if not impl_exists(impl):
+        if not impl_available(impl):
             continue
 
         with _TestServer() as server:
@@ -77,7 +77,7 @@ def test_quiver_matching_pairs_client_server_count(session):
 
 def test_quiver_matching_pairs_client_server_duration(session):
     for impl in AMQP_ARROW_IMPLS:
-        if not impl_exists(impl):
+        if not impl_available(impl):
             continue
 
         if impl in ("qpid-jms", "vertx-proton"):
@@ -89,11 +89,11 @@ def test_quiver_matching_pairs_client_server_duration(session):
 
 def test_quiver_mixed_pairs_peer_to_peer_count(session):
     for sender_impl in AMQP_ARROW_IMPLS:
-        if not impl_exists(sender_impl):
+        if not impl_available(sender_impl):
             continue
 
         for receiver_impl in PEER_TO_PEER_ARROW_IMPLS:
-            if not impl_exists(receiver_impl):
+            if not impl_available(receiver_impl):
                 continue
 
             if sender_impl in ("qpid-proton-c", "qpid-messaging-cpp", "qpid-messaging-python"):
@@ -106,11 +106,11 @@ def test_quiver_mixed_pairs_peer_to_peer_count(session):
 
 def test_quiver_mixed_pairs_peer_to_peer_duration(session):
     for sender_impl in AMQP_ARROW_IMPLS:
-        if not impl_exists(sender_impl):
+        if not impl_available(sender_impl):
             continue
 
         for receiver_impl in PEER_TO_PEER_ARROW_IMPLS:
-            if not impl_exists(receiver_impl):
+            if not impl_available(receiver_impl):
                 continue
 
             if sender_impl in ("qpid-proton-c", "qpid-messaging-cpp", "qpid-messaging-python"):

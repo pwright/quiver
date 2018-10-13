@@ -64,7 +64,7 @@ class _Impl(object):
         return _plano.join(_home, "impls", "quiver-{}-{}".format(self.kind, self.name))
 
     @property
-    def exists(self):
+    def available(self):
         if not _plano.is_file(self.file):
             return False
 
@@ -110,14 +110,14 @@ def require_impl(name, fallback=None):
     if impl is None:
         raise CommandError("No implementation for '{}'", name)
 
-    if not impl.exists:
+    if not impl.available:
         raise CommandError("No implementation for '{}'", impl.name)
 
     return impl
 
-def impl_exists(name):
+def impl_available(name):
     impl = get_impl(name)
-    return impl is not None and impl.exists
+    return impl is not None and impl.available
 
 ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow"]
 PEER_TO_PEER_ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow" and x.peer_to_peer]
@@ -126,10 +126,11 @@ OPENWIRE_ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow" and "openwir
 CORE_PROTOCOL_ARROW_IMPLS = [x.name for x in _impls if x.kind == "arrow" and "core" in x.protocols]
 
 SERVER_IMPLS = [x.name for x in _impls if x.kind == "server"]
+AMQP_SERVER_IMPLS = [x.name for x in _impls if x.kind == "server" and "amqp" in x.protocols]
 OPENWIRE_SERVER_IMPLS = [x.name for x in _impls if x.kind == "server" and "openwire" in x.protocols]
 CORE_PROTOCOL_SERVER_IMPLS = [x.name for x in _impls if x.kind == "server" and "core" in x.protocols]
 
-DEFAULT_ARROW_IMPL = "qpid-proton-python"
+DEFAULT_ARROW_IMPL = "qpid-proton-c"
 DEFAULT_SERVER_IMPL = "builtin"
 
 class CommandError(Exception):
