@@ -51,8 +51,8 @@ implementations:
   qpid-messaging-python           Client mode only
   qpid-proton-c [c]               The default implementation
   qpid-proton-cpp [cpp]
-  qpid-proton-python [python]
-  rhea [javascript]
+  qpid-proton-python [python, py]
+  rhea [javascript, js]
   vertx-proton [java]             Client mode only
 
 example usage:
