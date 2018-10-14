@@ -180,7 +180,6 @@ class Client {
             message.setLongProperty("SendTime", stime);
 
             producer.send(message);
-
             sent += 1;
 
             line.setLength(0);
@@ -204,10 +203,10 @@ class Client {
         final MessageConsumer consumer = session.createConsumer(queue);
 
         while (!stopping.get()) {
-            final Message message = consumer.receive();
+            final Message message = consumer.receive(100);
 
             if (message == null) {
-                throw new RuntimeException("Null receive");
+                continue;
             }
 
             received += 1;
