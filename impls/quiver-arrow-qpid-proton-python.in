@@ -57,7 +57,6 @@ class Handler(MessagingHandler):
         self.sent = 0
         self.received = 0
         self.accepted = 0
-        self.stopping = False
 
     def on_start(self, event):
         self.body = b"x" * self.body_size
@@ -113,15 +112,9 @@ class Handler(MessagingHandler):
     def on_sendable(self, event):
         assert self.operation == "send"
 
-        if self.stopping:
-            return
-
         message = Message()
 
         while event.sender.credit > 0:
-            if self.desired_count != 0 and self.sent == self.desired_count:
-                break
-
             id = str(self.sent + 1)
             stime = now()
 
@@ -147,9 +140,6 @@ class Handler(MessagingHandler):
     def on_message(self, event):
         assert self.operation == "receive"
 
-        if self.stopping:
-            return
-
         self.received += 1
 
         message = event.message
@@ -162,8 +152,6 @@ class Handler(MessagingHandler):
             self.stop(event)
 
     def stop(self, event):
-        self.stopping = True
-
         if self.connection is not None:
             self.connection.close()
 

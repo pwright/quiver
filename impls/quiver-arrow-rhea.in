@@ -65,7 +65,6 @@ let start_time;
 let sent = 0;
 let received = 0;
 let accepted = 0;
-let stopping = false;
 
 let connection;
 let listener;
@@ -90,13 +89,12 @@ function write(message) {
     if (offset + message.length >= buffer.length) {
         flush();
     }
+
     buffer.write(message, offset, message.length, 'ascii');
     offset += message.length;
 }
 
 function stop() {
-    stopping = true;
-
     if (connection) {
         connection.close();
     }
@@ -153,10 +151,6 @@ container.on("receiver_open", function (event) {
 });
 
 container.on("sendable", function(event) {
-    if (stopping) {
-        return;
-    }
-
     while (event.sender.sendable()) {
         if (desired_count != 0 && sent == desired_count) {
             break;
@@ -192,10 +186,6 @@ container.on("accepted", function(event) {
 
 container.on("message", function(event) {
     received++;
-
-    if (stopping) {
-        return;
-    }
 
     let message = event.message;
     let rtime = new Date().getTime();

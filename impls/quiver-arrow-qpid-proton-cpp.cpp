@@ -92,7 +92,6 @@ struct handler : public proton::messaging_handler {
     int sent = 0;
     int received = 0;
     int accepted = 0;
-    bool stopping;
 
     void on_container_start(proton::container& cont) override {
         body = std::string(body_size, 'x');
@@ -152,17 +151,9 @@ struct handler : public proton::messaging_handler {
     void on_sendable(proton::sender& snd) override {
         assert (operation == "send");
 
-        if (stopping) {
-            return;
-        }
-
         proton::message msg;
 
         while (snd.credit() > 0) {
-            if (desired_count != 0 && sent == desired_count) {
-                break;
-            }
-
             std::string id = std::to_string(sent + 1);
             int64_t stime = now();
 
@@ -176,7 +167,6 @@ struct handler : public proton::messaging_handler {
             }
 
             snd.send(msg);
-
             sent++;
 
             std::cout << id << "," << stime << "\n";
@@ -194,10 +184,6 @@ struct handler : public proton::messaging_handler {
     void on_message(proton::delivery& dlv, proton::message& msg) override {
         assert (operation == "receive");
 
-        if (stopping) {
-            return;
-        }
-
         received++;
 
         proton::message_id id = msg.id();
@@ -212,8 +198,6 @@ struct handler : public proton::messaging_handler {
     }
 
     void stop() {
-        stopping = true;
-
         if (!!connection) {
             connection.close();
         }

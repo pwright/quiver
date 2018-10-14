@@ -73,7 +73,6 @@ struct arrow {
     size_t sent;
     size_t received;
     size_t acknowledged;
-    bool stopping;
 };
 
 void fail_(const char* file, int line, const char* fmt, ...) {
@@ -100,11 +99,10 @@ void eprint(const char* fmt, ...) {
 }
 
 static void stop(struct arrow* a) {
-    a->stopping = true;
-
-    if (a->connection) {
+    if (a->connection && pn_connection_state(a->connection) & PN_LOCAL_ACTIVE) {
         pn_connection_close(a->connection);
     }
+
     if (a->listener) {
         pn_listener_close(a->listener);
     }
@@ -279,10 +277,6 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         break;
     }
     case PN_LINK_FLOW: {
-        if (a->stopping) {
-            break;
-        }
-
         pn_link_t* link = pn_event_link(e);
 
         if (pn_link_is_sender(link)) {
@@ -298,10 +292,6 @@ static bool handle(struct arrow* a, pn_event_t* e) {
         break;
     }
     case PN_DELIVERY: {
-        if (a->stopping) {
-            break;
-        }
-
         pn_delivery_t* delivery = pn_event_delivery(e);
         pn_link_t* link = pn_delivery_link(delivery);
 
@@ -346,9 +336,11 @@ static bool handle(struct arrow* a, pn_event_t* e) {
     case PN_TRANSPORT_CLOSED:
         // On server, ignore errors from dummy connections used to
         // test if we are listening
-        if (a->connection_mode != SERVER) {
+
+        if (a->connection_mode == CLIENT) {
             fail_if_condition(e, pn_transport_condition(pn_event_transport(e)));
         }
+
         break;
 
     case PN_CONNECTION_REMOTE_CLOSE:
@@ -389,14 +381,16 @@ void run(struct arrow* a) {
         pn_proactor_set_timeout(a->proactor, a->desired_duration * 1000);
     }
 
-    while(true) {
+    while (true) {
         pn_event_batch_t* events = pn_proactor_wait(a->proactor);
         pn_event_t* e;
+
         for (e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
             if (!handle(a, e)) {
                 return;
             }
         }
+
         pn_proactor_done(a->proactor, events);
     }
 }

@@ -159,7 +159,6 @@ void Client::sendMessages(Session& session) {
         }
 
         sender.send(message);
-
         sent++;
 
         std::cout << id << "," << stime << "\n";
@@ -186,7 +185,6 @@ void Client::receiveMessages(Session& session) {
         }
 
         receiver.get(message);
-
         received++;
 
         session.acknowledge();

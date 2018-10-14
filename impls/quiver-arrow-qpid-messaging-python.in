@@ -114,7 +114,6 @@ class Client(object):
                 message.durable = True
 
             sender.send(message, sync=False)
-
             self.sent +=1
 
             sys.stdout.write(record)
