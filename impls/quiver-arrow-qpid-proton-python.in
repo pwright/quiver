@@ -159,7 +159,7 @@ class Handler(MessagingHandler):
             self.listener.close()
 
 def main():
-    set_message_threshold("warn")
+    enable_logging("warn")
 
     if len(ARGS) == 1:
         print("Qpid Proton Python {}.{}.{}".format(*VERSION))

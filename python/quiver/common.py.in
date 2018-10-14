@@ -159,7 +159,7 @@ class Command(object):
         assert self.parser is not None
         assert self.args is None
 
-        _plano.set_message_threshold("warn")
+        _plano.enable_logging("warn")
 
         self.args = self.parser.parse_args()
 
@@ -216,10 +216,10 @@ class Command(object):
         self.verbose = self.args.verbose
 
         if self.quiet:
-            _plano.set_message_threshold("error")
+            _plano.enable_logging("error")
 
         if self.verbose:
-            _plano.set_message_threshold("notice")
+            _plano.enable_logging("notice")
 
     def init_url_attributes(self):
         self.url = self.args.url
@@ -278,7 +278,7 @@ class Command(object):
 
     def intercept_impl_info_request(self, default_impl):
         if "--impl-info" in _plano.ARGS:
-            _plano.set_message_threshold("warn")
+            _plano.enable_logging("warn")
 
             parser = _argparse.ArgumentParser()
             parser.add_argument("--impl", default=default_impl)

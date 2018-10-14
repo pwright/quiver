@@ -108,7 +108,7 @@ class QuiverBenchCommand(Command):
         self.init_common_tool_attributes()
 
         if not self.verbose:
-            _plano.set_message_threshold("warn")
+            _plano.enable_logging("warn")
 
         self.failures = list()
 

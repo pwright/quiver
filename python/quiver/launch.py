@@ -57,14 +57,13 @@ class QuiverLaunchCommand(Command):
     def init(self):
         super(QuiverLaunchCommand, self).init()
 
-        _plano.set_message_output(_sys.stdout)
-        _plano.set_message_threshold("notice")
+        _plano.enable_logging(level="notice", output=_sys.stdout)
 
         if self.quiet:
-            _plano.set_message_threshold("warn")
+            _plano.enable_logging("warn", output=_sys.stdout)
 
         if self.verbose:
-            _plano.set_message_threshold("debug")
+            _plano.enable_logging("debug", output=_sys.stdout)
 
         def nvl(value, fallback):
             if value is None:

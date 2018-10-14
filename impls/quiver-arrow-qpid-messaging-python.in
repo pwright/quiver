@@ -151,7 +151,7 @@ class Client(object):
                 break
 
 def main():
-    set_message_threshold("warn")
+    enable_logging("warn")
 
     if len(ARGS) == 1:
         print("Qpid Messaging Python XXX")

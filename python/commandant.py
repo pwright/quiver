@@ -28,12 +28,14 @@ import fnmatch as _fnmatch
 import inspect as _inspect
 import os as _os
 import runpy as _runpy
+import signal as _signal
 import sys as _sys
 import tempfile as _tempfile
 import time as _time
+import traceback as _traceback
 
 class Command(object):
-    def __init__(self, home, name=None):
+    def __init__(self, home=None, name=None, standard_args=True):
         self.home = home
         self.name = name
 
@@ -42,12 +44,13 @@ class Command(object):
 
         self._args = None
 
-        self.add_argument("--quiet", action="store_true",
-                          help="Print no logging to the console")
-        self.add_argument("--verbose", action="store_true",
-                          help="Print detailed logging to the console")
-        self.add_argument("--init-only", action="store_true",
-                          help=_argparse.SUPPRESS)
+        if standard_args:
+            self.add_argument("--quiet", action="store_true",
+                              help="Print no logging to the console")
+            self.add_argument("--verbose", action="store_true",
+                              help="Print detailed logging to the console")
+            self.add_argument("--init-only", action="store_true",
+                              help=_argparse.SUPPRESS)
 
         if self.name is None:
             self.name = self._parser.prog
@@ -129,11 +132,11 @@ class Command(object):
             self.print_message(message, *args)
 
     def warn(self, message, *args):
-        message = "Warning! {}".format(message)
+        message = "Warning! {0}".format(message)
         self.print_message(message, *args)
 
     def error(self, message, *args):
-        message = "Error! {}".format(message)
+        message = "Error! {0}".format(message)
         self.print_message(message, *args)
 
     def fail(self, message, *args):
@@ -143,10 +146,16 @@ class Command(object):
     def print_message(self, message, *args):
         message = message[0].upper() + message[1:]
         message = message.format(*args)
-        message = "{}: {}".format(self.id, message)
+        message = "{0}: {1}".format(self.id, message)
 
-        _sys.stderr.write("{}\n".format(message))
+        _sys.stderr.write("{0}\n".format(message))
         _sys.stderr.flush()
+
+class TestTimedOut(Exception):
+    pass
+
+class TestSkipped(Exception):
+    pass
 
 _test_epilog = """
 patterns:
@@ -157,8 +166,8 @@ patterns:
 """
 
 class TestCommand(Command):
-    def __init__(self, home, test_modules, name=None):
-        super(TestCommand, self).__init__(home, name=name)
+    def __init__(self, test_modules, home=None, name=None):
+        super(TestCommand, self).__init__(home=home, name=name)
 
         self.test_modules = []
 
@@ -178,6 +187,8 @@ class TestCommand(Command):
                           help="Do not run tests with names matching PATTERNS")
         self.add_argument("--iterations", metavar="COUNT", type=int, default=1,
                           help="Run the tests COUNT times (default 1)")
+        self.add_argument("--timeout", metavar="SECONDS", type=int, default=300,
+                          help="Fail any test running longer than SECONDS (default 300)")
 
     def init(self):
         super(TestCommand, self).init()
@@ -186,6 +197,7 @@ class TestCommand(Command):
         self.include_patterns = self.args.include.split(",")
         self.exclude_patterns = []
         self.iterations = self.args.iterations
+        self.test_timeout = self.args.timeout
 
         if self.args.exclude is not None:
             self.exclude_patterns = self.args.exclude.split(",")
@@ -211,6 +223,7 @@ class TestCommand(Command):
             return
 
         print("RESULT: Some tests failed")
+        _sys.exit(1)
 
 class _TestSession(object):
     def __init__(self, module):
@@ -231,7 +244,7 @@ class _TestFunction(object):
         return self.function(session)
 
     def __repr__(self):
-        return "test '{}:{}'".format(self.module.name, self.name)
+        return "test '{0}:{1}'".format(self.module.name, self.name)
 
     @property
     def name(self):
@@ -251,7 +264,7 @@ class _TestModule(object):
         self.command.test_modules.append(self)
 
     def __repr__(self):
-        return "module '{}'".format(self.name)
+        return "module '{0}'".format(self.name)
 
     @property
     def name(self):
@@ -289,11 +302,11 @@ class _TestModule(object):
                 continue
 
             if not included(name):
-                self.command.info("Skipping test '{}:{}' (not included)", self.module.__name__, name)
+                self.command.info("Skipping test '{0}:{1}' (not included)", self.module.__name__, name)
                 continue
 
             if excluded(name):
-                self.command.info("Skipping test '{}:{}' (excluded)", self.module.__name__, name)
+                self.command.info("Skipping test '{0}:{1}' (excluded)", self.module.__name__, name)
                 continue
 
             _TestFunction(self, function)
@@ -306,7 +319,7 @@ class _TestModule(object):
             return
 
         if not self.command.verbose:
-            self.command.notice("Running tests from {}", self)
+            self.command.notice("Running tests from {0}", self)
 
         if self.open_function is not None:
             self.open_function(session)
@@ -322,34 +335,48 @@ class _TestModule(object):
         start_time = _time.time()
 
         if self.command.verbose:
-            self.command.notice("Running {}", function)
+            self.command.notice("Running {0}", function)
 
             try:
-                function(session)
+                with _Timer(self.command.test_timeout):
+                    function(session)
             except KeyboardInterrupt:
                 raise
-            except:
+            except Exception as e:
                 session.failed_tests.append(function)
-                self.command.error("{} FAILED ({})", function, _elapsed_time(start_time))
+
+                if isinstance(e, TestTimedOut):
+                    self.command.error("Test timed out")
+                else:
+                    _traceback.print_exc()
+
+                self.command.error("{0} FAILED ({1})", function, _elapsed_time(start_time))
 
                 return
 
             session.passed_tests.append(function)
-            self.command.notice("{} PASSED ({})", function, _elapsed_time(start_time))
+            self.command.notice("{0} PASSED ({1})", function, _elapsed_time(start_time))
         else:
-            self._print("{:.<73} ".format(function.name + " "), end="")
+            self._print("{0:.<73} ".format(function.name + " "), end="")
 
             output_file = _tempfile.mkstemp(prefix="commandant-")[1]
 
             try:
                 with open(output_file, "w") as out:
                     with _OutputRedirected(out, out):
-                        function(session)
+                        with _Timer(self.command.test_timeout):
+                            function(session)
             except KeyboardInterrupt:
                 raise
-            except:
+            except Exception as e:
                 session.failed_tests.append(function)
-                self._print("FAILED {:>6}".format(_elapsed_time(start_time)))
+
+                self._print("FAILED {0:>6}".format(_elapsed_time(start_time)))
+
+                if isinstance(e, TestTimedOut):
+                    print("Error! Test timed out")
+                else:
+                    _traceback.print_exc()
 
                 with open(output_file, "r") as out:
                     for line in out:
@@ -363,7 +390,7 @@ class _TestModule(object):
                 _os.remove(output_file)
 
             session.passed_tests.append(function)
-            self._print("PASSED {:>6}".format(_elapsed_time(start_time)))
+            self._print("PASSED {0:>6}".format(_elapsed_time(start_time)))
 
     def _print(self, *args, **kwargs):
         if self.command.quiet:
@@ -377,12 +404,12 @@ def _elapsed_time(start_time):
     elapsed = _time.time() - start_time
 
     if elapsed > 240:
-        return "{:.0f}m".format(elapsed / 60)
+        return "{0:.0f}m".format(elapsed / 60)
 
     if elapsed > 60:
-        return "{:.0f}s".format(elapsed)
+        return "{0:.0f}s".format(elapsed)
 
-    return "{:.1f}s".format(elapsed)
+    return "{0:.1f}s".format(elapsed)
 
 class _OutputRedirected(object):
     def __init__(self, stdout=None, stderr=None):
@@ -407,3 +434,17 @@ class _OutputRedirected(object):
     def flush(self):
         _sys.stdout.flush()
         _sys.stderr.flush()
+
+class _Timer(object):
+    def __init__(self, seconds):
+        self.seconds = seconds
+
+    def __enter__(self):
+        _signal.signal(_signal.SIGALRM, self.raise_timeout)
+        _signal.alarm(self.seconds)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        _signal.alarm(0)
+
+    def raise_timeout(self, *args):
+        raise TestTimedOut()

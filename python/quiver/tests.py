@@ -23,7 +23,7 @@ from plano import *
 from quiver.common import *
 
 def open_test_session(session):
-    set_message_threshold("warn")
+    enable_logging("warn")
 
 def test_common_options(session):
     commands = [
@@ -118,7 +118,7 @@ def test_quiver_mixed_pairs_peer_to_peer_duration(session):
                  _test_url(), sender_impl, receiver_impl)
 
 def test_quiver_bench_client_server(session):
-    with temp_dir() as output:
+    with temp_working_dir() as output:
         command = [
             "quiver-bench",
             "--count", "1",
@@ -132,7 +132,7 @@ def test_quiver_bench_client_server(session):
         call(command)
 
 def test_quiver_bench_peer_to_peer(session):
-    with temp_dir() as output:
+    with temp_working_dir() as output:
         command = [
             "quiver-bench",
             "--count", "1",
