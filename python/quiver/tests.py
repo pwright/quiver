@@ -92,7 +92,7 @@ def test_quiver_mixed_pairs_peer_to_peer_count(session):
             if not impl_available(receiver_impl):
                 continue
 
-            if sender_impl in ("qpid-proton-c", "qpid-messaging-cpp", "qpid-messaging-python"):
+            if sender_impl in ("qpid-messaging-cpp", "qpid-messaging-python"):
                 if receiver_impl in ("rhea"):
                     # XXX Trouble
                     continue
@@ -109,14 +109,10 @@ def test_quiver_mixed_pairs_peer_to_peer_duration(session):
             if not impl_available(receiver_impl):
                 continue
 
-            if sender_impl in ("qpid-proton-c", "qpid-messaging-cpp", "qpid-messaging-python"):
+            if sender_impl in ("qpid-messaging-cpp", "qpid-messaging-python"):
                 if receiver_impl in ("rhea"):
                     # XXX Trouble
                     continue
-
-            if sender_impl in ("qpid-proton-c"):
-                # XXX More trouble
-                continue
 
             call("quiver {} --sender {} --receiver {} --duration 1 --peer-to-peer --verbose",
                  _test_url(), sender_impl, receiver_impl)

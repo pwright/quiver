@@ -57,7 +57,7 @@ implementations:
 
 example usage:
   $ qdrouterd &                   # Start a message server
-  $ quiver q0                     # Start test
+  $ quiver q0                     # Start the test
 """
 
 class QuiverPairCommand(Command):
@@ -138,12 +138,16 @@ class QuiverPairCommand(Command):
 
         self.start_time = now()
 
+        #_os.environ["DEBUG"] = "*"
         receiver = _plano.start_process(receiver_args)
+        #del _os.environ["DEBUG"]
 
         if self.peer_to_peer:
             _plano.wait_for_port(self.port, host=self.host)
 
+        #_os.environ["PN_TRACE_FRM"] = "1"
         sender = _plano.start_process(sender_args)
+        #del _os.environ["PN_TRACE_FRM"]
 
         try:
             if not self.quiet:
