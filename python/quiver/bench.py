@@ -67,7 +67,7 @@ class QuiverBenchCommand(Command):
                                  default="none")
         self.parser.add_argument("--exclude-servers", metavar="IMPLS",
                                  help="Do not test servers in IMPLS",
-                                 default="builtin")
+                                 default="none")
         self.parser.add_argument("--client-server", action="store_true",
                                  help="Test only client-server mode")
         self.parser.add_argument("--peer-to-peer", action="store_true",
