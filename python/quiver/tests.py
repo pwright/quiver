@@ -361,7 +361,7 @@ def _test_arrow(impl):
     if not impl_available(impl):
         raise TestSkipped("Arrow '{}' is unavailable".format(impl))
 
-    call("quiver-arrow --impl {} --impl-info", impl)
+    call("quiver-arrow --impl {} --info", impl)
 
     if impl in AMQP_ARROW_IMPLS:
         with _TestServer() as server:
@@ -375,7 +375,7 @@ def _test_server(impl):
     if not impl_available(impl):
         raise TestSkipped("Server '{}' is unavailable".format(impl))
 
-    call("quiver-server --impl {} --impl-info", impl)
+    call("quiver-server --impl {} --info", impl)
 
     if impl == "activemq-artemis":
         # quiver-server: Calling '/home/jross/code/quiver/build/quiver/impls/quiver-server-activemq-artemis

@@ -95,8 +95,10 @@ class QuiverArrowCommand(Command):
         self.parser.add_argument("--impl", metavar="NAME",
                                  help="Use NAME implementation",
                                  default=DEFAULT_ARROW_IMPL)
-        self.parser.add_argument("--impl-info", action="store_true",
+        self.parser.add_argument("--info", action="store_true",
                                  help="Print implementation details and exit")
+        self.parser.add_argument("--impl-info", action="store_true", dest="info",
+                                 help=_argparse.SUPPRESS)
         self.parser.add_argument("--id", metavar="ID",
                                  help="Use ID as the client or server identity")
         self.parser.add_argument("--server", action="store_true",
@@ -110,7 +112,7 @@ class QuiverArrowCommand(Command):
         self.add_common_tool_arguments()
 
     def init(self):
-        self.intercept_impl_info_request(DEFAULT_ARROW_IMPL)
+        self.intercept_info_request(DEFAULT_ARROW_IMPL)
 
         super(QuiverArrowCommand, self).init()
 

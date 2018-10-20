@@ -61,8 +61,10 @@ class QuiverServerCommand(Command):
         self.parser.add_argument("--impl", metavar="NAME",
                                  help="Use NAME implementation",
                                  default=DEFAULT_SERVER_IMPL)
-        self.parser.add_argument("--impl-info", action="store_true",
+        self.parser.add_argument("--info", action="store_true",
                                  help="Print implementation details and exit")
+        self.parser.add_argument("--impl-info", action="store_true", dest="info",
+                                 help=_argparse.SUPPRESS)
         self.parser.add_argument("--ready-file", metavar="FILE",
                                  help="File used to indicate the server is ready")
         self.parser.add_argument("--prelude", metavar="PRELUDE", default="",
@@ -71,7 +73,7 @@ class QuiverServerCommand(Command):
         self.add_common_tool_arguments()
 
     def init(self):
-        self.intercept_impl_info_request(DEFAULT_SERVER_IMPL)
+        self.intercept_info_request(DEFAULT_SERVER_IMPL)
 
         super(QuiverServerCommand, self).init()
 

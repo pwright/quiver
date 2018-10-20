@@ -276,8 +276,8 @@ class Command(object):
         except (AttributeError, ValueError):
             self.parser.error("Failure parsing '{}' as integer with unit".format(value))
 
-    def intercept_impl_info_request(self, default_impl):
-        if "--impl-info" in _plano.ARGS:
+    def intercept_info_request(self, default_impl):
+        if "--info" in _plano.ARGS:
             _plano.enable_logging("warn")
 
             parser = _argparse.ArgumentParser()
