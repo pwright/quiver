@@ -106,7 +106,7 @@ class QuiverArrowCommand(Command):
         self.parser.add_argument("--passive", action="store_true",
                                  help="Operate in passive mode")
         self.parser.add_argument("--prelude", metavar="PRELUDE", default="",
-                                 help="Commands to precede the impl invocation")
+                                 help="Commands to precede the implementation invocation")
 
         self.add_common_test_arguments()
         self.add_common_tool_arguments()

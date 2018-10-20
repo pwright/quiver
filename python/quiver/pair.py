@@ -72,15 +72,16 @@ class QuiverPairCommand(Command):
         self.parser.add_argument("--output", metavar="DIR",
                                  help="Save output files to DIR")
         self.parser.add_argument("--arrow", metavar="IMPL", default=DEFAULT_ARROW_IMPL,
-                                 help="Use IMPL to send and receive")
+                                 help="Use IMPL to send and receive " \
+                                 "(default {})".format(DEFAULT_ARROW_IMPL))
         self.parser.add_argument("--sender", metavar="IMPL",
-                                 help="Use IMPL to send")
+                                 help="Use IMPL to send (default {})".format(DEFAULT_ARROW_IMPL))
         self.parser.add_argument("--receiver", metavar="IMPL",
-                                 help="Use IMPL to receive")
+                                 help="Use IMPL to receive (default {})".format(DEFAULT_ARROW_IMPL))
         self.parser.add_argument("--impl", metavar="IMPL",
                                  help="An alias for --arrow")
         self.parser.add_argument("--peer-to-peer", action="store_true",
-                                 help="Test peer-to-peer mode")
+                                 help="Connect the sender directly to the receiver in server mode")
 
         self.add_common_test_arguments()
         self.add_common_tool_arguments()

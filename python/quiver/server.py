@@ -66,7 +66,7 @@ class QuiverServerCommand(Command):
         self.parser.add_argument("--impl-info", action="store_true", dest="info",
                                  help=_argparse.SUPPRESS)
         self.parser.add_argument("--ready-file", metavar="FILE",
-                                 help="File used to indicate the server is ready")
+                                 help="The file used to indicate the server is ready")
         self.parser.add_argument("--prelude", metavar="PRELUDE", default="",
                                  help="Commands to precede the implementation invocation")
 
