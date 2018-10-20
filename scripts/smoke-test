@@ -25,9 +25,8 @@ def main():
 
     call("quiver q0 --quiet --init-only", quiet=True)
     call("quiver-arrow send //localhost:12345/a/b/c --init-only", quiet=True)
-    call("quiver-bench --init-only --output {}", make_temp_dir(), quiet=True)
-    call("quiver-launch q0 --init-only", quiet=True)
     call("quiver-server q0 --init-only", quiet=True)
+    call("quiver-bench --init-only --output {}", make_temp_dir(), quiet=True)
 
 if __name__ == "__main__":
     try:
