@@ -18,15 +18,20 @@
 # under the License.
 #
 
-import os
-import sys
+from quiver.common import *
 
-default_home = os.path.normpath("@quiver_home@")
-home = os.environ.get("QUIVER_HOME", default_home)
-sys.path.insert(0, os.path.join(home, "python"))
+test_template = """
+def test_pair_{sender_impl_symbol}_to_{receiver_impl_symbol}(session):
+    _test_pair("{sender_impl}", "{receiver_impl}")
+"""
 
-from quiver.launch import QuiverLaunchCommand
-
-if __name__ == "__main__":
-    command = QuiverLaunchCommand(home)
-    command.main()
+for sender_impl in AMQP_ARROW_IMPLS:
+    print("# {}".format(sender_impl))
+    print()
+    
+    for receiver_impl in AMQP_ARROW_IMPLS:
+        sender_impl_symbol = sender_impl.replace("-", "_")
+        receiver_impl_symbol = receiver_impl.replace("-", "_")
+        
+        print(test_template.format(**locals()).strip())
+        print()
