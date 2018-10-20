@@ -253,7 +253,7 @@ class Command(object):
 
         _plano.make_dir(self.output_dir)
 
-        _plano.notice("Saving output files to {}", self.output_dir)
+        _plano.notice("Saving output files to '{}'", self.output_dir)
 
     def parse_count(self, value):
         assert self.parser is not None
