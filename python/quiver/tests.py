@@ -142,7 +142,6 @@ def test_pair_qpid_messaging_cpp_to_qpid_proton_python(session):
     _test_pair("qpid-messaging-cpp", "qpid-proton-python")
 
 def test_pair_qpid_messaging_cpp_to_rhea(session):
-    raise TestSkipped("Temporarily disabled")
     _test_pair("qpid-messaging-cpp", "rhea")
 
 def test_pair_qpid_messaging_cpp_to_vertx_proton(session):
@@ -169,7 +168,6 @@ def test_pair_qpid_messaging_python_to_qpid_proton_python(session):
     _test_pair("qpid-messaging-python", "qpid-proton-python")
 
 def test_pair_qpid_messaging_python_to_rhea(session):
-    raise TestSkipped("Temporarily disabled")
     _test_pair("qpid-messaging-python", "rhea")
 
 def test_pair_qpid_messaging_python_to_vertx_proton(session):
