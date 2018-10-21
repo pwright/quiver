@@ -89,7 +89,6 @@ class QuiverBenchCommand(Command):
 
             self.output_dir = "{}-{}".format(prefix, datestamp)
 
-        _plano.remove(self.output_dir)
         _plano.make_dir(self.output_dir)
 
         self.client_server = True
@@ -137,17 +136,17 @@ class QuiverBenchCommand(Command):
 
         for name in list(sender_impls):
             if not impl_available(name):
-                _plano.warn("No implementation for '{}'; skipping it", name)
+                _plano.notice("Sender '{}' is unavailable", name)
                 sender_impls.remove(name)
 
         for name in list(receiver_impls):
             if not impl_available(name):
-                _plano.warn("No implementation for '{}'; skipping it", name)
+                _plano.notice("Receiver '{}' is unavailable", name)
                 receiver_impls.remove(name)
 
         for name in list(server_impls):
             if not impl_available(name):
-                _plano.warn("No implementation for '{}'; skipping it", name)
+                _plano.notice("Server '{}' is unavailable", name)
                 server_impls.remove(name)
 
         self.sender_impls = sorted(sender_impls)
@@ -243,43 +242,44 @@ class QuiverBenchCommand(Command):
 
         if not peer_to_peer:
             server = _TestServer(server_dir, server_impl)
-            _plano.make_dir(server.output_dir)
 
-        if not self.verbose:
-            print("{:.<113} ".format(summary), end="")
+        if not self.verbose and not self.quiet:
+            print("{:.<111} ".format(summary), end="")
             _plano.flush()
 
         if server is not None:
-            out = open(server.output_file, "w")
-
             try:
-                server.start(port, out)
+                server.start(port)
             except _Timeout as e:
                 self.failures.append(str(e)) # XXX capture the combo
 
-                if not self.verbose:
+                if self.verbose:
+                    _plano.error(str(e))
+                else:
                     print("FAILED")
 
-                    if server is not None:
-                        server.print_summary()
+                if server is not None:
+                    server.print_summary()
 
         try:
             pair.run(port, self.args)
 
-            if not self.verbose:
+            if not self.verbose and not self.quiet:
                 print("PASSED")
         except KeyboardInterrupt:
             raise
         except _plano.CalledProcessError as e:
             self.failures.append(str(e)) # XXX capture the combo
 
-            if not self.verbose:
+            if self.verbose:
+                _plano.error(str(e))
+            elif not self.quiet:
                 print("FAILED")
 
-                pair.print_summary()
+            pair.print_summary()
 
-                if server is not None:
-                    server.print_summary()
+            if server is not None:
+                server.print_summary()
         except:
             _traceback.print_exc()
         finally:
@@ -287,14 +287,13 @@ class QuiverBenchCommand(Command):
 
             if server is not None:
                 server.stop()
-                out.close()
 
         self.report(pair, server)
 
     def report(self, pair, server):
         pass
 
-class _TestPair(object):
+class _TestPair:
     def __init__(self, command, output_dir, sender_impl, receiver_impl, peer_to_peer):
         self.command = command
         self.output_dir = output_dir
@@ -343,15 +342,13 @@ class _TestPair(object):
 
     def print_summary(self):
         print("--- Test command ---")
-        print("> {}".format(_plano.read(self.command_file)))
+        print("> {}".format(_plano.read(self.command_file)), end="")
         print("--- Test output ---")
 
         for line in _plano.read_lines(self.output_file):
             print("> {}".format(line), end="")
 
-        print()
-
-class _TestServer(object):
+class _TestServer:
     def __init__(self, output_dir, impl):
         self.output_dir = output_dir
         self.impl = impl
@@ -361,12 +358,15 @@ class _TestServer(object):
         self.output_file = _plano.join(self.output_dir, "output.txt")
         self.status_file = _plano.join(self.output_dir, "status.txt")
 
+        self.output = None
         self.proc = None
 
-    def start(self, port, out):
+    def start(self, port):
         assert self.proc is None
 
         _plano.make_dir(self.output_dir)
+
+        self.output = open(self.output_file, "w")
 
         command = [
             "quiver-server", "//127.0.0.1:{}/q0".format(port),
@@ -377,7 +377,7 @@ class _TestServer(object):
 
         _plano.write(self.command_file, "{}\n".format(" ".join(command)))
 
-        self.proc = _plano.start_process(command, stdout=out, stderr=out)
+        self.proc = _plano.start_process(command, stdout=self.output, stderr=self.output)
 
         for i in range(30):
             if _plano.read(self.ready_file) == "ready\n":
@@ -392,7 +392,9 @@ class _TestServer(object):
 
         _plano.stop_process(self.proc)
 
-        if self.proc.returncode > 0:
+        self.output.close()
+
+        if self.proc.returncode > 0 and self.proc.returncode < 128:
             _plano.write(self.status_file, "FAILED\n")
         else:
             _plano.write(self.status_file, "PASSED\n")
@@ -401,13 +403,11 @@ class _TestServer(object):
 
     def print_summary(self):
         print("--- Server command ---")
-        print("> {}".format(_plano.read(self.command_file)))
+        print("> {}".format(_plano.read(self.command_file)), end="")
         print("--- Server output ---")
 
         for line in _plano.read_lines(self.output_file):
             print("> {}".format(line), end="")
-
-        print()
 
 class _Timeout(Exception):
     pass

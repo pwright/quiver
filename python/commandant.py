@@ -29,6 +29,7 @@ import inspect as _inspect
 import os as _os
 import runpy as _runpy
 import signal as _signal
+import subprocess as _subprocess
 import sys as _sys
 import tempfile as _tempfile
 import time as _time
@@ -406,18 +407,27 @@ class _TestModule(object):
                 session.failed_tests.append(function)
 
                 self._print("FAILED  {0:>6}".format(_elapsed_time(start_time)))
+                self._print("--- Error ---")
 
                 if isinstance(e, TestTimedOut):
-                    print("Error! Test timed out")
+                    self._print("> Test timed out")
+                elif isinstance(e, _subprocess.CalledProcessError):
+                    self._print("> {}".format(str(e)))
                 else:
-                    _traceback.print_exc()
+                    lines = _traceback.format_exc().rstrip().split("\n")
+                    lines = ["> {}".format(x) for x in lines]
 
-                with open(output_file, "r") as out:
-                    for line in out:
-                        _sys.stderr.write("> ")
-                        _sys.stderr.write(line)
+                    self._print("\n".join(lines))
 
-                _sys.stderr.flush()
+                self._print("--- Output ---")
+
+                if not self.command.quiet:
+                    with open(output_file, "r") as out:
+                        for line in out:
+                            _sys.stdout.write("> ")
+                            _sys.stdout.write(line)
+
+                    _sys.stdout.flush()
 
                 return
             finally:
