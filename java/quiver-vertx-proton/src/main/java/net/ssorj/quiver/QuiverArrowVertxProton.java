@@ -157,6 +157,13 @@ public class QuiverArrowVertxProton {
                 try {
                     try {
                         while (!sender.sendQueueFull()) {
+                            int sent = count.get();
+
+                            if (sent > 0 && sent == desiredCount) {
+                                connection.close();
+                                break;
+                            }
+
                             final Message msg = Message.Factory.create();
                             final String id = String.valueOf(count.get());
                             final long stime = System.currentTimeMillis();
@@ -173,14 +180,10 @@ public class QuiverArrowVertxProton {
                             }
 
                             sender.send(msg);
+                            count.incrementAndGet();
 
                             line.setLength(0);
                             out.append(line.append(id).append(',').append(stime).append('\n'));
-
-                            if (count.incrementAndGet() == desiredCount) {
-                                connection.close();
-                                return;
-                            }
                         }
                     } finally {
                         out.flush();
@@ -223,7 +226,6 @@ public class QuiverArrowVertxProton {
 
                         if (count.incrementAndGet() == desiredCount) {
                             connection.close();
-                            return;
                         }
                     } finally {
                         out.flush();

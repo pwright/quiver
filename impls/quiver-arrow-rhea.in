@@ -152,7 +152,7 @@ container.on("receiver_open", function (event) {
 
 container.on("sendable", function(event) {
     while (event.sender.sendable()) {
-        if (desired_count != 0 && sent == desired_count) {
+        if (desired_count > 0 && sent == desired_count) {
             break;
         }
 
@@ -169,7 +169,6 @@ container.on("sendable", function(event) {
         };
 
         event.sender.send(message);
-
         sent++;
 
         write(id + "," + stime + "\n");

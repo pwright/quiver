@@ -154,6 +154,10 @@ struct handler : public proton::messaging_handler {
         proton::message msg;
 
         while (snd.credit() > 0) {
+            if (desired_count > 0 && sent == desired_count) {
+                break;
+            }
+
             std::string id = std::to_string(sent + 1);
             int64_t stime = now();
 

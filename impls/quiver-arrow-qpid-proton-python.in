@@ -115,6 +115,9 @@ class Handler(MessagingHandler):
         message = Message()
 
         while event.sender.credit > 0:
+            if (self.desired_count > 0 and self.sent == self.desired_count):
+                break
+
             id = str(self.sent + 1)
             stime = now()
 

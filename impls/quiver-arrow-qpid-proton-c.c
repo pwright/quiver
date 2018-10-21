@@ -281,11 +281,11 @@ static bool handle(struct arrow* a, pn_event_t* e) {
 
         if (pn_link_is_sender(link)) {
             while (pn_link_credit(link) > 0) {
-                send_message(a, link);
-
-                if (a->sent == a->desired_count) {
+                if (a->desired_count > 0 && a->sent == a->desired_count) {
                     break;
                 }
+
+                send_message(a, link);
             }
         }
 
