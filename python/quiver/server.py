@@ -30,26 +30,18 @@ import uuid as _uuid
 
 from .common import *
 from .common import __version__
+from .common import _epilog_address_urls
+from .common import _epilog_server_impls
 
 _description = """
 Start a message server with the given queue.
 """
 
 _epilog = """
-address URLs:
-  [SCHEME:][//SERVER/]ADDRESS     The default server is 'localhost'
-  queue0
-  //localhost/queue0
-  amqp://example.net:10000/jobs
-  amqps://10.0.0.10/jobs/alpha
+{_epilog_address_urls}
 
-server implementations:
-  activemq
-  activemq-artemis [artemis]
-  builtin                         The default implementation
-  qpid-cpp [qpidd]
-  qpid-dispatch [dispatch, qdrouterd]
-"""
+{_epilog_server_impls}
+""".format(**globals())
 
 class QuiverServerCommand(Command):
     def __init__(self, home_dir):

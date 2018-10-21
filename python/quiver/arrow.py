@@ -29,6 +29,9 @@ import time as _time
 
 from .common import *
 from .common import __version__
+from .common import _epilog_address_urls
+from .common import _epilog_arrow_impls
+from .common import _epilog_count_and_duration_formats
 from .common import _urlparse
 
 _description = """
@@ -44,24 +47,11 @@ operations:
   send                  Send messages
   receive               Receive messages
 
-address URLs:
-  [SCHEME:][//SERVER/]ADDRESS     The default server is 'localhost'
-  queue0
-  //localhost/queue0
-  amqp://example.net:10000/jobs
-  amqps://10.0.0.10/jobs/alpha
+{_epilog_address_urls}
 
-implementations:
-  activemq-artemis-jms            Client mode only; requires Artemis server
-  activemq-jms                    Client mode only; ActiveMQ or Artemis server
-  qpid-jms [jms]                  Client mode only
-  qpid-messaging-cpp              Client mode only
-  qpid-messaging-python           Client mode only
-  qpid-proton-c [c]               The default implementation
-  qpid-proton-cpp [cpp]
-  qpid-proton-python [python, py]
-  rhea [javascript, js]
-  vertx-proton [java]             Client mode only
+{_epilog_count_and_duration_formats}
+
+{_epilog_arrow_impls}
 
 server and passive modes:
   By default quiver-arrow operates in client and active modes, meaning
@@ -76,7 +66,7 @@ example usage:
   $ qdrouterd &                   # Start a message server
   $ quiver-arrow receive q0 &     # Start receiving
   $ quiver-arrow send q0          # Start sending
-"""
+""".format(**globals())
 
 class QuiverArrowCommand(Command):
     def __init__(self, home_dir):
