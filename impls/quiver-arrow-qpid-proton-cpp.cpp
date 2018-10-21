@@ -213,7 +213,7 @@ struct handler : public proton::messaging_handler {
 
     void on_transport_error(proton::transport& trans) override {
         // On server ignore errors from dummy connections to see if we are listening.
-        if (connection_mode != "server") {
+        if (connection_mode == "client") {
             on_error(trans.error());
         }
     }

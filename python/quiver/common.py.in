@@ -134,7 +134,7 @@ DEFAULT_ARROW_IMPL = "qpid-proton-c"
 DEFAULT_SERVER_IMPL = "builtin"
 
 _epilog_arrow_impls = """
-implementations:
+arrow implementations:
   activemq-artemis-jms            Client mode only; requires Artemis server
   activemq-jms                    Client mode only; ActiveMQ or Artemis server
   qpid-jms (jms)                  Client mode only

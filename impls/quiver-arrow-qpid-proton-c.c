@@ -99,7 +99,7 @@ void eprint(const char* fmt, ...) {
 }
 
 static void stop(struct arrow* a) {
-    if (a->connection && pn_connection_state(a->connection) & PN_LOCAL_ACTIVE) {
+    if (a->connection) {
         pn_connection_close(a->connection);
     }
 
