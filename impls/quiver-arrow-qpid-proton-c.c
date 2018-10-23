@@ -106,6 +106,8 @@ static void stop(struct arrow* a) {
     if (a->listener) {
         pn_listener_close(a->listener);
     }
+
+    pn_proactor_cancel_timeout(a->proactor);
 }
 
 static inline bool bytes_equal(const pn_bytes_t a, const pn_bytes_t b) {
