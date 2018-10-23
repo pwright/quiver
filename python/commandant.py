@@ -171,7 +171,7 @@ class TestCommand(Command):
 
         self.add_argument("-l", "--list", action="store_true",
                           help="Print the test names and exit")
-        self.add_argument("-i", "--include", metavar="PATTERN", action="append", default=list(),
+        self.add_argument("include", metavar="PATTERN", nargs="*",
                           help="Run only tests with names matching PATTERN. " \
                           "This option can be repeated.")
         self.add_argument("-e", "--exclude", metavar="PATTERN", action="append", default=list(),
