@@ -202,9 +202,8 @@ public class QuiverArrowVertxProton {
         final StringBuilder line = new StringBuilder();
         final BufferedWriter out = getWriter();
         final AtomicInteger count = new AtomicInteger(0);
+        final int creditTopUpThreshold = Math.max(1, creditWindow / 2);
         final ProtonReceiver receiver = connection.createReceiver(address);
-
-        int creditTopUpThreshold = Math.max(1, creditWindow / 2);
 
         receiver.setAutoAccept(false).setPrefetch(0).flow(creditWindow);
         receiver.handler((delivery, msg) -> {
@@ -219,8 +218,9 @@ public class QuiverArrowVertxProton {
 
                         delivery.disposition(ACCEPTED, true);
 
-                        int credit = receiver.getCredit();
-                        if(credit < creditTopUpThreshold) {
+                        final int credit = receiver.getCredit();
+
+                        if (credit < creditTopUpThreshold) {
                             receiver.flow(creditWindow - credit);
                         }
 
