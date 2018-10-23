@@ -383,7 +383,7 @@ class _TestServer:
             if _plano.read(self.ready_file) == "ready\n":
                 break
 
-            _plano.sleep(1)
+            _plano.sleep(0.2)
         else:
             raise _Timeout("Timed out waiting for server to be ready")
 
