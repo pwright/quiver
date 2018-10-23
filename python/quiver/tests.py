@@ -62,9 +62,11 @@ def test_arrow_qpid_messaging_python(session):
     _test_arrow("qpid-messaging-python")
 
 def test_arrow_qpid_proton_c(session):
+    raise TestSkipped("Disabled: https://github.com/ssorj/quiver/issues/51")
     _test_arrow("qpid-proton-c")
 
 def test_arrow_qpid_proton_cpp(session):
+    raise TestSkipped("Disabled: https://github.com/ssorj/quiver/issues/51")
     _test_arrow("qpid-proton-cpp")
 
 def test_arrow_qpid_proton_python(session):
