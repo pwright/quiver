@@ -123,7 +123,7 @@ class QuiverArrowCommand(Command):
             raise Exception()
 
         if self.id_ is None:
-            self.id_ = "quiver-{}".format(_plano.unique_id(4))
+            self.id_ = "quiver-{}-{}".format(self.role, _plano.unique_id(4))
 
         if self.args.server:
             self.connection_mode = "server"
