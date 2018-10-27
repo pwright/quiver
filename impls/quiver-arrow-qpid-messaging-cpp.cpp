@@ -79,7 +79,7 @@ struct Client {
     int64_t start_time;
     int sent = 0;
     int received = 0;
-    std::atomic<bool> stopping;
+    std::atomic<bool> stopping {false};
 
     void run();
     void sendMessages(Session&);
