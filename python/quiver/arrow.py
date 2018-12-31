@@ -140,6 +140,8 @@ class QuiverArrowCommand(Command):
             if self.impl.name in ("activemq-jms", "activemq-artemis-jms"):
                 self.port = "61616"
 
+        # XXX Drop the flags stuff
+
         flags = list()
 
         if self.durable:
@@ -181,6 +183,29 @@ class QuiverArrowCommand(Command):
             str(self.transaction_size),
             self.flags,
         ]
+
+        kwarg_impls = [
+            "qpid-proton-python",
+            "qpid-messaging-python",
+        ]
+
+        if self.impl.name in kwarg_impls:
+            args = self.prelude + [
+                self.impl.file,
+                "connection-mode={}".format(self.connection_mode),
+                "channel-mode={}".format(self.channel_mode),
+                "operation={}".format(self.operation),
+                "id={}".format(self.id_),
+                "host={}".format(self.host),
+                "port={}".format(self.port),
+                "path={}".format(self.path),
+                "duration={}".format(self.duration),
+                "count={}".format(self.count),
+                "body-size={}".format(self.body_size),
+                "credit-window={}".format(self.credit_window),
+                "transaction-size={}".format(self.transaction_size),
+                "durable={}".format(1 if self.durable else 0),
+            ]
 
         assert None not in args, args
 
