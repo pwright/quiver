@@ -32,7 +32,7 @@ home = os.environ.get("QUIVER_HOME", default_home)
 sys.path.insert(0, os.path.join(home, "python"))
 
 from plano import *
-from quiver.common import now
+from quiver.common import *
 
 class Handler(MessagingHandler):
     def __init__(self, **kwargs):
@@ -171,7 +171,7 @@ def main():
 
         exit()
 
-    kwargs = dict([x.split("=", 1) for x in ARGS[1:]])
+    kwargs = parse_keyword_args(ARGS[1:])
 
     if int(kwargs["transaction-size"]) > 0:
         exit("This impl doesn't support transactions yet")

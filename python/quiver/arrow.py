@@ -366,7 +366,7 @@ class QuiverArrowCommand(Command):
         with open(self.summary_file, "w") as f:
             _json.dump(props, f, indent=2)
 
-class _StatusSnapshot(object):
+class _StatusSnapshot:
     def __init__(self, command, previous):
         self.command = command
         self.previous = previous

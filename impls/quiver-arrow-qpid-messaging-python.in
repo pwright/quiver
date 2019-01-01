@@ -32,7 +32,7 @@ home = os.environ.get("QUIVER_HOME", default_home)
 sys.path.insert(0, os.path.join(home, "python"))
 
 from plano import *
-from quiver.common import now
+from quiver.common import *
 
 class Client(object):
     def __init__(self):
@@ -160,7 +160,7 @@ def main():
 
         exit()
 
-    kwargs = dict([x.split("=", 1) for x in ARGS[1:]])
+    kwargs = parse_keyword_args(ARGS[1:])
 
     if kwargs["connection-mode"] != "client":
         exit("This impl supports client mode only")
