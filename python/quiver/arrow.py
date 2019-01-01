@@ -187,6 +187,7 @@ class QuiverArrowCommand(Command):
         kwarg_impls = [
             "qpid-proton-python",
             "qpid-messaging-python",
+            "rhea",
         ]
 
         if self.impl.name in kwarg_impls:
