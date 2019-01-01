@@ -51,12 +51,12 @@ const operation = kwargs["operation"];
 const host = kwargs["host"];
 const port = kwargs["port"];
 const path = kwargs["path"];
-const desired_duration = new Number(kwargs["duration"]);
-const desired_count = new Number(kwargs["count"]);
-const body_size = new Number(kwargs["body-size"]);
-const credit_window = new Number(kwargs["credit-window"]);
-const transaction_size = new Number(kwargs["transaction-size"]);
-const durable = new Boolean(kwargs["durable"]);
+const desired_duration = parseInt(kwargs["duration"]);
+const desired_count = parseInt(kwargs["count"]);
+const body_size = parseInt(kwargs["body-size"]);
+const credit_window = parseInt(kwargs["credit-window"]);
+const transaction_size = parseInt(kwargs["transaction-size"]);
+const durable = new Boolean(parseInt(kwargs["durable"]));
 
 let a = new Array(body_size);
 
