@@ -65,9 +65,8 @@ std::vector<std::string> split(const std::string& s, char delim, int max) {
     ss.str(s);
 
     for (int i = 0; std::getline(ss, elem, delim); i++) {
-        if (max != 0 && i == max) break;
-
         elems.push_back(elem);
+        if (max != 0 && i == max) break;
     }
 
     return elems;
@@ -232,11 +231,9 @@ int main(int argc, char** argv) {
     }
 
     std::map<std::string, std::string> kwargs {};
-    std::string arg {};
-    std::vector<std::string> pair {};
 
     for (int i = 1; i < argc; i++) {
-        pair = split(argv[i], '=', 1);
+        auto pair = split(argv[i], '=', 1);
         kwargs[pair[0]] = pair[1];
     }
 

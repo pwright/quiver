@@ -187,6 +187,7 @@ class QuiverArrowCommand(Command):
         kwarg_impls = [
             "qpid-proton-cpp",
             "qpid-proton-python",
+            "qpid-messaging-cpp",
             "qpid-messaging-python",
             "rhea",
         ]
