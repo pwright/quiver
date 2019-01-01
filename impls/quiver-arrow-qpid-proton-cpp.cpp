@@ -22,7 +22,6 @@
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/duration.hpp>
 #include <proton/link.hpp>
@@ -260,7 +259,7 @@ int main(int argc, char** argv) {
     h.durable = std::stoi(kwargs["durable"]);
 
     try {
-        proton::default_container(h, h.id).run();
+        proton::container(h, h.id).run();
     } catch (const std::exception& e) {
         eprint(e.what());
         return 1;
