@@ -29,9 +29,7 @@ import subprocess as _subprocess
 import uuid as _uuid
 
 from .common import *
-from .common import __version__
-from .common import _epilog_address_urls
-from .common import _epilog_server_impls
+from .common import __version__, _epilog_address_urls, _epilog_server_impls
 
 _description = """
 Start a message server with the given queue.
@@ -84,26 +82,11 @@ class QuiverServerCommand(Command):
     def run(self):
         args = self.prelude + [
             self.impl.file,
-            self.host,
-            self.port,
-            self.path,
-            self.ready_file,
+            "host={}".format(self.host),
+            "port={}".format(self.port),
+            "path={}".format(self.path),
+            "ready-file={}".format(self.ready_file),
         ]
-
-        assert None not in args, args
-
-        kwarg_impls = [
-            "builtin",
-        ]
-
-        if self.impl.name in kwarg_impls:
-            args = self.prelude + [
-                self.impl.file,
-                "host={}".format(self.host),
-                "port={}".format(self.port),
-                "path={}".format(self.path),
-                "ready-file={}".format(self.ready_file),
-            ]
 
         _plano.call(args)
 
