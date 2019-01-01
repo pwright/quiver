@@ -92,6 +92,19 @@ class QuiverServerCommand(Command):
 
         assert None not in args, args
 
+        kwarg_impls = [
+            "builtin",
+        ]
+
+        if self.impl.name in kwarg_impls:
+            args = self.prelude + [
+                self.impl.file,
+                "host={}".format(self.host),
+                "port={}".format(self.port),
+                "path={}".format(self.path),
+                "ready-file={}".format(self.ready_file),
+            ]
+
         _plano.call(args)
 
 class BuiltinBroker(_brokerlib.Broker):

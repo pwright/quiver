@@ -184,6 +184,8 @@ class QuiverArrowCommand(Command):
             self.flags,
         ]
 
+        assert None not in args, args
+
         kwarg_impls = [
             "qpid-proton-cpp",
             "qpid-proton-python",
@@ -209,8 +211,6 @@ class QuiverArrowCommand(Command):
                 "transaction-size={}".format(self.transaction_size),
                 "durable={}".format(1 if self.durable else 0),
             ]
-
-        assert None not in args, args
 
         with open(self.transfers_file, "wb") as fout:
             env = _plano.ENV

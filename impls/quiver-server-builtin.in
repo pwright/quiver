@@ -40,10 +40,16 @@ def main():
         print("Python {}".format(" ".join(sys.version.split())))
         exit()
 
-    host = ARGS[1]
-    port = ARGS[2]
-    path = ARGS[3]
-    ready_file = ARGS[4]
+    kwargs = dict()
+
+    for arg in ARGS[1:]:
+        k, v = arg.split("=", 1)
+        kwargs[k] = v
+
+    host = kwargs["host"]
+    port = kwargs["port"]
+    path = kwargs["path"]
+    ready_file = kwargs["ready-file"]
 
     broker = BuiltinBroker(host, port, path, ready_file)
     broker.run()
