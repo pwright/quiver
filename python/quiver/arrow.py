@@ -195,6 +195,7 @@ class QuiverArrowCommand(Command):
             "qpid-messaging-cpp",
             "qpid-messaging-python",
             "rhea",
+            "vertx-proton",
         ]
 
         if self.impl.name in kwarg_impls:
