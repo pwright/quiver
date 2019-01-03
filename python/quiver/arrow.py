@@ -187,6 +187,9 @@ class QuiverArrowCommand(Command):
         assert None not in args, args
 
         kwarg_impls = [
+            "activemq-jms",
+            "activemq-artemis-jms",
+            "qpid-jms",
             "qpid-proton-cpp",
             "qpid-proton-python",
             "qpid-messaging-cpp",
