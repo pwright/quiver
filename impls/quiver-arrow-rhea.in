@@ -39,8 +39,8 @@ if (process.argv.length === 2) {
 const kwargs = {};
 
 for (let arg of process.argv.slice(2)) {
-    let [k, v] = arg.split("=", 2);
-    kwargs[k] = v;
+    let elems = arg.split("=", 2);
+    kwargs[elems[0]] = elems[1];
 }
 
 const container = rhea.create_container({id: kwargs["id"]});
